@@ -1,6 +1,7 @@
+import path from 'path'
 import git from 'nodegit'
 
-export const getDiffFromCommit = async (
+export const getTemplateDiffFromCommit = async (
   commitSha: string
 ): Promise<{
   addedFiles: string[]
@@ -19,16 +20,18 @@ export const getDiffFromCommit = async (
 
   const {addedFiles, modifiedFiles, deletedFiles} = patchList.reduce(
     (acc, p) => {
-      const path = p.newFile().path()
-      if (!path.endsWith('.hbs')) return acc
+      const filePath = path.resolve(process.cwd(), p.newFile().path())
+      if (!filePath.endsWith('.hbs')) return acc
 
       return {
-        addedFiles: p.isAdded() ? [...acc.addedFiles, path] : acc.addedFiles,
+        addedFiles: p.isAdded()
+          ? [...acc.addedFiles, filePath]
+          : acc.addedFiles,
         modifiedFiles: p.isModified()
-          ? [...acc.modifiedFiles, path]
+          ? [...acc.modifiedFiles, filePath]
           : acc.modifiedFiles,
         deletedFiles: p.isDeleted()
-          ? [...acc.deletedFiles, path]
+          ? [...acc.deletedFiles, filePath]
           : acc.deletedFiles
       }
     },

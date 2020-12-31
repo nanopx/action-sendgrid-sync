@@ -1,4 +1,4 @@
-import axios from 'axios'
+import axios, {AxiosInstance} from 'axios'
 
 const TEMPLATE_GENERATION = 'dynamic'
 
@@ -36,23 +36,46 @@ interface Template {
   versions: BaseTemplateVersion[]
 }
 
-const client = axios.create({
-  baseURL: 'https://api.sendgrid.com/v3'
-})
+let client: AxiosInstance | null
+
+export const setupClient = (apiKey: string): AxiosInstance => {
+  client = axios.create({
+    baseURL: 'https://api.sendgrid.com/v3',
+    headers: {
+      Authorization: `Bearer ${apiKey}`
+    }
+  })
+
+  return client
+}
+
+const getClient = (): AxiosInstance | never => {
+  if (!client) {
+    throw new Error('SendGrid client unitinialized')
+  }
+  return client
+}
 
 export const fetchTemplates = async (): Promise<{templates: Template[]}> => {
-  return await client.get(`/templates`, {
+  const {data} = await getClient().get(`/templates`, {
     params: {generations: TEMPLATE_GENERATION}
   })
+
+  return data
 }
 
 export const fetchTemplate = async (templateId: string): Promise<Template> => {
-  return await client.get(`/templates/${templateId}`)
+  const {data} = await getClient().get(`/templates/${templateId}`)
+  return data
 }
 
 export const postTemplateVersion = async (
   templateId: Template['id'],
   params: TemplateVersionParams
 ): Promise<TemplateVersion> => {
-  return await client.post(`/templates/${templateId}/versions`, params)
+  const {data} = await getClient().post(
+    `/templates/${templateId}/versions`,
+    params
+  )
+  return data
 }
