@@ -4,6 +4,7 @@ import * as core from '@actions/core'
 import {setup} from './setupHandlebars'
 import {getTemplateDiffFromCommit} from './getTemplateDiffFromCommit'
 import {setupClient, fetchTemplates} from './sendgrid'
+import {sync} from './syncSendgrid'
 
 const sha = github.context.sha
 // const {owner, repo} = github.context.repo
@@ -15,34 +16,17 @@ setupClient(SENDGRID_API_KEY)
 
 async function run(): Promise<void> {
   try {
-    const {
-      // templates,
-      // partials,
-      // templateDeps,
-      // partialDeps,
-      // compileTemplate,
-      generateChangeset
-    } = await setup(TEMPLATES_DIR, PARTIALS_DIR)
+    const {compileTemplate, generateChangeset} = await setup(
+      TEMPLATES_DIR,
+      PARTIALS_DIR
+    )
 
-    const {
-      addedFiles,
-      modifiedFiles,
-      deletedFiles
-    } = await getTemplateDiffFromCommit(sha)
+    const templateDiff = await getTemplateDiffFromCommit(sha)
+    const changes = generateChangeset(templateDiff)
+    const {templates} = await fetchTemplates()
 
-    const changes = generateChangeset(addedFiles, modifiedFiles, deletedFiles)
-
-    changes.created.map(template => {
-      core.debug(`create Template: ${template}`)
-    })
-
-    changes.updated.map(template => {
-      core.debug(`update Template: ${template}`)
-    })
-
-    changes.deleted.map(template => {
-      core.debug(`deleted Template: ${template}`)
-    })
+    sync(templates, changes)
+    // compileTemplate
   } catch (error) {
     core.setFailed(error.message)
   }

@@ -28,7 +28,7 @@ interface TemplateVersionParams {
   subject: string
 }
 
-interface Template {
+export interface Template {
   id: string
   name: string
   generation: 'dynamic' | 'legacy'

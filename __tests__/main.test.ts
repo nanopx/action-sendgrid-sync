@@ -1,48 +1,39 @@
 import * as process from 'process'
 import * as cp from 'child_process'
 import * as path from 'path'
-import {getTemplatePartialDeps, getTemplateName, getDependencyMaps, findTemplates} from '../src/setupHandlebars'
+import {setup, getTemplatePartialDeps, getTemplateName, getDependencyMaps, findTemplates} from '../src/setupHandlebars'
 // import {getDiffFromCommit} from '../src/getDiffFromCommit'
 
 jest.setTimeout(1000 * 60) // 60sec
 
 const TEMPLATES_DIR = './__tests__/fixtures/templates/'
 const PARTIALS_DIR = './__tests__/fixtures/templates/partials/'
-const TEST_SHA = '0b63802cd1c2bb9be268b9aa67c5d36494307df8'
+const TEST_SHA = 'ce7c20a60b2715b8f3a217e54607df4eaa0c424d' // '0b63802cd1c2bb9be268b9aa67c5d36494307df8'
+
+const getFixturePath = (file: string) => path.resolve(process.cwd(), './__tests__/fixtures', file)
+const getTemplatesPath = (file: string) => getFixturePath(`templates/${file}`)
 
 test('find template files', async () => {
   const {templates, partials} = await findTemplates(TEMPLATES_DIR, PARTIALS_DIR)
 
   expect(templates).toEqual([
-    path.resolve(
-      process.cwd(),
-      './__tests__/fixtures/templates/nested/template.hbs'
-    ),
-    path.resolve(process.cwd(), './__tests__/fixtures/templates/template.hbs')
+    getTemplatesPath('nested/template.hbs'),
+    getTemplatesPath('template.hbs'),
   ])
 
   expect(partials).toEqual([
-    path.resolve(
-      process.cwd(),
-      './__tests__/fixtures/templates/partials/footer.hbs'
-    ),
-    path.resolve(
-      process.cwd(),
-      './__tests__/fixtures/templates/partials/header.hbs'
-    ),
-    path.resolve(
-      process.cwd(),
-      './__tests__/fixtures/templates/partials/nested/block.hbs'
-    )
+    getTemplatesPath('partials/footer.hbs'),
+    getTemplatesPath('partials/header.hbs'),
+    getTemplatesPath('partials/nested/block.hbs'),
   ])
 })
 
 test('getTemplateName', async () => {
-  const tplName = getTemplateName(TEMPLATES_DIR, path.resolve(process.cwd(), './__tests__/fixtures/templates/template.hbs'))
-  const tplName2 = getTemplateName(TEMPLATES_DIR, path.resolve(process.cwd(), './__tests__/fixtures/templates/nested/template.hbs'))
+  const tplName = getTemplateName(TEMPLATES_DIR, getTemplatesPath('template.hbs'))
+  const tplName2 = getTemplateName(TEMPLATES_DIR, getTemplatesPath('nested/template.hbs'))
 
-  const partialName = getTemplateName(PARTIALS_DIR, path.resolve(process.cwd(), './__tests__/fixtures/templates/partials/header.hbs'))
-  const partialName2 = getTemplateName(PARTIALS_DIR, path.resolve(process.cwd(), './__tests__/fixtures/templates/partials/nested/block.hbs'))
+  const partialName = getTemplateName(PARTIALS_DIR, getTemplatesPath('partials/header.hbs'))
+  const partialName2 = getTemplateName(PARTIALS_DIR, getTemplatesPath('partials/nested/block.hbs'))
 
   expect(tplName).toEqual('template')
   expect(tplName2).toEqual('nested/template')
@@ -52,9 +43,10 @@ test('getTemplateName', async () => {
 })
 
 test('list template partial dependencies', async () => {
-  const partialDeps = await getTemplatePartialDeps(path.resolve(process.cwd(), './__tests__/fixtures/templates/template.hbs'))
+  const partialDeps = await getTemplatePartialDeps(getTemplatesPath('template.hbs'))
   expect(partialDeps).toEqual(['header', 'nested/block', 'footer'])
 })
+
 
 test('dependency mappings', async () => {
   const {templates} = await findTemplates(TEMPLATES_DIR, PARTIALS_DIR)
@@ -92,6 +84,167 @@ test('dependency mappings', async () => {
 //   })
 // })
 
+
+describe('Calculate template changes', () => {
+  let generateChangeset: any = null
+
+  beforeAll(async () => {
+    const { generateChangeset: fn } = await setup(TEMPLATES_DIR, PARTIALS_DIR)
+    generateChangeset = fn
+  })
+
+  test('return correct template changes when no changes', async () => {
+    expect(generateChangeset({})).toEqual({
+      created: [], updated: [], deleted: []
+    })
+  })
+
+  test('return correct template changes when template added', async () => {
+    expect(generateChangeset({
+      added: [
+        getTemplatesPath('template.hbs')
+      ]
+    })).toEqual({
+      created: ['template'],
+      updated: [],
+      deleted: []
+    })
+  })
+
+  test('return correct template changes when partial added', async () => {
+    expect(generateChangeset({
+      added: [
+        getTemplatesPath('partials/footer.hbs')
+      ]
+    })).toEqual({
+      created: [],
+      // NOTE: template depends on footer
+      updated: ['template'],
+      deleted: []
+    })
+  })
+
+  test('return correct template changes when partial and template added', async () => {
+    expect(generateChangeset({
+      added: [
+        getTemplatesPath('template.hbs'),
+        getTemplatesPath('partials/footer.hbs')
+      ]
+    })).toEqual({
+      created: ['template'],
+      updated: [],
+      deleted: []
+    })
+  })
+
+  test('return correct template changes when template modified', async () => {
+    expect(generateChangeset({
+      modified: [
+        getTemplatesPath('nested/template.hbs')
+      ]
+    })).toEqual({
+      created: [],
+      updated: [
+        'nested/template'
+      ],
+      deleted: []
+    })
+  })
+
+  test('return correct template changes when partial modified', async () => {
+    expect(generateChangeset({
+      modified: [
+        getTemplatesPath('partials/footer.hbs')
+      ]
+    })).toEqual({
+      created: [],
+      updated: [
+        'template'
+      ],
+      deleted: []
+    })
+  })
+
+  test('return correct template changes when template and partial modified', async () => {
+    expect(generateChangeset({
+      modified: [
+        getTemplatesPath('template.hbs'),
+        getTemplatesPath('partials/footer.hbs')
+      ]
+    })).toEqual({
+      created: [],
+      updated: [
+        'template'
+      ],
+      deleted: []
+    })
+  })
+
+
+  test('return correct template changes when template deleted', async () => {
+    expect(generateChangeset({
+      deleted: [
+        getTemplatesPath('nested/template.hbs')
+      ]
+    })).toEqual({
+      created: [],
+      updated: [
+      ],
+      deleted: [
+        'nested/template'
+      ]
+    })
+  })
+
+  test('return correct template changes when partial deleted', async () => {
+    expect(generateChangeset({
+      deleted: [
+        getTemplatesPath('partials/footer.hbs')
+      ]
+    })).toEqual({
+      created: [],
+      updated: [
+        'template'
+      ],
+      deleted: []
+    })
+  })
+
+  test('return correct template changes when template and partial deleted', async () => {
+    expect(generateChangeset({
+      deleted: [
+        getTemplatesPath('template.hbs'),
+        getTemplatesPath('nested/template.hbs'),
+        getTemplatesPath('partials/footer.hbs')
+      ]
+    })).toEqual({
+      created: [],
+      updated: [],
+      deleted: [
+        'nested/template',
+        'template',
+      ]
+    })
+  })
+
+  test('return correct template changes when template and partial deleted', async () => {
+    expect(generateChangeset({
+      deleted: [
+        getTemplatesPath('nested/template.hbs'),
+        getTemplatesPath('partials/footer.hbs')
+      ]
+    })).toEqual({
+      created: [],
+      updated: [
+        'template'
+      ],
+      deleted: [
+        'nested/template'
+      ]
+    })
+  })
+})
+
 test('test runs', () => {
   process.env['ACTIONS_RUNNER_DEBUG'] = 'true'
   process.env['INPUT_TEMPLATESDIR'] = TEMPLATES_DIR
@@ -108,3 +261,4 @@ test('test runs', () => {
   // eslint-disable-next-line no-console
   console.log(cp.execFileSync(np, [ip], options).toString())
 })
+

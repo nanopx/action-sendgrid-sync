@@ -122,13 +122,19 @@ export const getDependencyMaps = async (
   return {templateDeps, partialDeps}
 }
 
-export const compileTemplate = async (
-  templatePath: string
+export const createCompileTemplate = (templatesDir: string) => async (
+  name: string
 ): Promise<string> => {
-  const content = await fs.readFile(templatePath)
+  const content = await fs.readFile(path.resolve(templatesDir, `${name}.hbs`))
   // Escape template variables before compiling to template
   const template = hbs.compile(escapeVariables(`${content}`))
   return template({title: 'title'})
+}
+
+export interface Changeset {
+  created: string[]
+  updated: string[]
+  deleted: string[]
 }
 
 export const createGenerateChangeset = (
@@ -137,7 +143,15 @@ export const createGenerateChangeset = (
   templates: string[],
   partials: string[],
   {partialDeps}: DependencyMaps
-) => (added: string[], modified: string[], deleted: string[]) => {
+) => ({
+  added = [],
+  modified = [],
+  deleted = []
+}: {
+  added?: string[]
+  modified?: string[]
+  deleted?: string[]
+}): Changeset => {
   const addedTemplates = templates
     .filter(t => added.includes(t))
     .map(t => getTemplateName(templatesDir, t))
@@ -164,7 +178,7 @@ export const createGenerateChangeset = (
         [] as string[]
       )
     ])
-  ].filter(t => !addedTemplates.includes(t))
+  ].filter(t => !addedTemplates.includes(t) && !deletedTemplates.includes(t))
 
   return {
     created: addedTemplates,
@@ -188,7 +202,7 @@ export const setup = async (templatesDir: string, partialsDir: string) => {
     partials,
     templateDeps,
     partialDeps,
-    compileTemplate,
+    compileTemplate: createCompileTemplate(templatesDir),
     generateChangeset: createGenerateChangeset(
       templatesDir,
       partialsDir,
