@@ -1,10 +1,9 @@
-import path from 'path'
 import * as github from '@actions/github'
 import * as core from '@actions/core'
 // import {exec} from '@actions/exec'
 import {loadPartials} from './partialCompileHandlebars'
-import {findFiles} from './findFiles'
-import {getDiffFromSha} from './getDiffFromSha'
+import {findTemplates} from './findTemplates'
+import {getDiffFromCommit} from './getTemplateDiffFromCommit'
 
 const sha = github.context.sha
 const {owner, repo} = github.context.repo
@@ -15,28 +14,35 @@ const partialsDir: string = core.getInput('partialsDir')
 async function run(): Promise<void> {
   try {
     core.debug(templatesDir)
-    core.debug(partialsDir)
     core.debug(owner)
     core.debug(repo)
     core.debug(sha)
 
-    if (partialsDir) {
-      await loadPartials(partialsDir)
-    }
+    const {templates, partials} = await findTemplates(templatesDir, partialsDir)
 
-    const {addedFiles, modifiedFiles, deletedFiles} = await getDiffFromSha(sha)
-
-    core.debug(addedFiles.join(', '))
-    core.debug(modifiedFiles.join(', '))
-    core.debug(deletedFiles.join(', '))
-
-    const templates = await findFiles(
-      `${path.resolve(process.cwd(), templatesDir)}/**/*.hbs`
-    )
+    partials.map(template => {
+      core.debug(template)
+    })
 
     templates.map(template => {
       core.debug(template)
     })
+
+    const {addedFiles, modifiedFiles, deletedFiles} = await getDiffFromCommit(
+      sha
+    )
+
+    addedFiles.map(template => {
+      core.debug(template)
+    })
+    modifiedFiles.map(template => {
+      core.debug(template)
+    })
+    deletedFiles.map(template => {
+      core.debug(template)
+    })
+
+    loadPartials(partials)
   } catch (error) {
     core.setFailed(error.message)
   }

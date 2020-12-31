@@ -1,7 +1,6 @@
 import {promises as fs} from 'fs'
 import path from 'path'
 import handlebars from 'handlebars'
-import {findFiles} from './findFiles'
 
 const hbs = handlebars.create()
 
@@ -9,11 +8,11 @@ const hbs = handlebars.create()
 const escapeVariables = (template: string): string =>
   template.replace(/\{\{(?!>)/g, '\\{{')
 
-export const loadPartials = async (dir: string): Promise<string[]> => {
-  const files = await findFiles(`${path.resolve(process.cwd(), dir)}/**/*.hbs`)
-
+export const loadPartials = async (
+  partialFiles: string[]
+): Promise<string[]> => {
   return await Promise.all(
-    files.map(async file => {
+    partialFiles.map(async file => {
       const filename = path.basename(file, '.hbs')
       const content = await fs.readFile(file)
       // Escape partial variables before compiling to partial template
