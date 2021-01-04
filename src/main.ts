@@ -6,7 +6,7 @@ import {getTemplateDiffFromCommit} from './getTemplateDiffFromCommit'
 import {setupClient} from './sendgrid'
 import {sync} from './syncSendgrid'
 
-const sha = github.context.sha
+const ref = github.context.ref
 // const {owner, repo} = github.context.repo
 const SENDGRID_API_KEY: string = core.getInput('sendgridApiKey')
 const TEMPLATES_DIR: string = core.getInput('templatesDir')
@@ -29,7 +29,7 @@ async function run(): Promise<void> {
       PARTIALS_DIR
     )
 
-    const templateDiff = await getTemplateDiffFromCommit(sha)
+    const templateDiff = await getTemplateDiffFromCommit(ref)
     const changes = generateChangeset(templateDiff)
 
     const changedTemplates = [...changes.created, ...changes.updated]

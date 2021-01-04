@@ -310,6 +310,7 @@ test('test runs', () => {
   process.env['INPUT_DRYRUN'] = 'true'
   process.env['GITHUB_REPOSITORY'] = 'nanopx/action-sendgrid-sync'
   process.env['GITHUB_SHA'] = TEST_SHA
+  process.env['GITHUB_REF'] = 'refs/heads/main'
 
   const np = process.execPath
   const ip = path.join(__dirname, '..', 'lib', 'main.js')

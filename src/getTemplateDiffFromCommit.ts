@@ -2,7 +2,7 @@ import path from 'path'
 import git from 'nodegit'
 
 export const getTemplateDiffFromCommit = async (
-  commitSha: string
+  reference: string
 ): Promise<{
   added: string[]
   modified: string[]
@@ -11,7 +11,7 @@ export const getTemplateDiffFromCommit = async (
 }> => {
   const repo = await git.Repository.open(process.cwd())
 
-  const commit = await repo.getCommit(commitSha)
+  const commit = await repo.getReferenceCommit(reference)
 
   const diffList = await commit.getDiff()
 
