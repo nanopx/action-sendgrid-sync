@@ -123,6 +123,7 @@ const syncSendgrid_1 = __webpack_require__(1182);
 const SENDGRID_API_KEY = core.getInput('sendgridApiKey');
 const TEMPLATES_DIR = core.getInput('templatesDir');
 const PARTIALS_DIR = core.getInput('partialsDir');
+const TEMPLATE_PREFIX = core.getInput('templatePrefix') || '';
 const PRESERVE_VERSIONS = Number(core.getInput('preserveVersions') || '2');
 const DRY_RUN = core.getInput('dryRun') === 'true';
 const FORCE_SYNC_ALL = core.getInput('forceSyncAll') === 'true';
@@ -145,7 +146,7 @@ function run() {
             const { compileTemplate, generateChangeset } = yield setupHandlebars_1.setup(TEMPLATES_DIR, PARTIALS_DIR);
             const changes = generateChangeset(FORCE_SYNC_ALL
                 ? {
-                    // Mark all templates as modified
+                    // [Force Sync] Mark all templates as modified
                     modified: (yield setupHandlebars_1.findTemplates(TEMPLATES_DIR, PARTIALS_DIR))
                         .templates
                 }
@@ -154,7 +155,7 @@ function run() {
             const templateMap = (yield Promise.all(changedTemplates.map((tplName) => __awaiter(this, void 0, void 0, function* () {
                 return (() => __awaiter(this, void 0, void 0, function* () { return [tplName, yield compileTemplate(tplName)]; }))();
             })))).reduce((acc, [name, content]) => (Object.assign(Object.assign({}, acc), { [name]: content })), {});
-            yield syncSendgrid_1.sync(changes, templateMap, PRESERVE_VERSIONS, DRY_RUN);
+            yield syncSendgrid_1.sync(changes, templateMap, TEMPLATE_PREFIX, PRESERVE_VERSIONS, DRY_RUN);
             core.info('\nSendGrid sync done!');
         }
         catch (error) {
@@ -476,9 +477,15 @@ const getOutdatedVersions = (template, preserveVersionCount) => {
 const log = (message, dryRun = false) => {
     core.info(`${dryRun ? '[DRY RUN] ' : ''}${message}`);
 };
-const sync = ({ created, updated, deleted, renamed }, templateMap, preserveVersionCount = 2, dryRun = false) => __awaiter(void 0, void 0, void 0, function* () {
+const createTemplatePrefixer = (prefix) => (name) => `${prefix}${name}`;
+const createTemplatePrefixRemover = (prefix) => (name) => name.replace(new RegExp(`^${prefix}`), '');
+const sync = ({ created, updated, deleted, renamed }, templateMap, templatePrefix = '', preserveVersionCount = 2, dryRun = false) => __awaiter(void 0, void 0, void 0, function* () {
+    const getTemplateName = createTemplatePrefixer(templatePrefix);
+    const removeTemplatePrefix = createTemplatePrefixRemover(templatePrefix);
     const { templates } = yield sendgrid_1.fetchTemplates();
-    const existingTemplateNames = templates.map(t => t.name);
+    const existingTemplateNames = templates
+        .filter(t => t.name.startsWith(templatePrefix))
+        .map(t => removeTemplatePrefix(t.name));
     // templates to create
     const createTemplates = [
         ...created.filter(t => !existingTemplateNames.includes(t)),
@@ -501,43 +508,47 @@ const sync = ({ created, updated, deleted, renamed }, templateMap, preserveVersi
     createTemplates.length && log('Creating templates:', dryRun);
     // create
     const createdResponses = yield Promise.all(createTemplates.map((t) => __awaiter(void 0, void 0, void 0, function* () {
-        log(`  - Creating ${t}`, dryRun);
+        const name = getTemplateName(t);
+        log(`  - Creating ${name}`, dryRun);
         if (dryRun) {
             return Promise.resolve({
-                id: t,
-                name: t,
+                id: name,
+                name,
                 versions: []
             });
         }
-        return yield sendgrid_1.createTemplate(t);
+        return yield sendgrid_1.createTemplate(name);
     })));
     renamedTemplates.length && log('Renaming templates:', dryRun);
     // rename
     const renamedResponses = yield Promise.all(renamedTemplates.map(({ from, to }) => __awaiter(void 0, void 0, void 0, function* () {
-        log(`  - Renaming template: ${from} ▶ ${to}`, dryRun);
+        const fromName = getTemplateName(from);
+        const toName = getTemplateName(to);
+        log(`  - Renaming template: ${fromName} ▶ ${toName}`, dryRun);
         const targetTemplate = templateByName[from];
         if (dryRun) {
             return Promise.resolve({
-                id: to,
-                name: to,
+                id: toName,
+                name: toName,
                 versions: []
             });
         }
-        return yield sendgrid_1.updateTemplate(targetTemplate.id, to);
+        return yield sendgrid_1.updateTemplate(targetTemplate.id, toName);
     })));
     // update templates index
     for (const t of [...createdResponses, ...renamedResponses]) {
         if (t) {
-            templateByName[t.name] = t;
+            templateByName[removeTemplatePrefix(t.name)] = t;
         }
     }
     updateVersionTemplates.length &&
         log('Creating new template versions:', dryRun);
     // create new versions
     yield Promise.all(updateVersionTemplates.map((t) => __awaiter(void 0, void 0, void 0, function* () {
+        const name = getTemplateName(t);
         const targetTemplate = templateByName[t];
         const nextVer = getNextVersion(targetTemplate);
-        log(`  - Creating new version for template: ${t} (${nextVer})`, dryRun);
+        log(`  - Creating new version for template: ${name} (${nextVer})`, dryRun);
         if (dryRun) {
             return Promise.resolve();
         }
@@ -558,11 +569,12 @@ const sync = ({ created, updated, deleted, renamed }, templateMap, preserveVersi
     hasOutdated && log('Deleting old template versions:', dryRun);
     // delete old versions
     yield Promise.all(updateVersionTemplates.map((t) => __awaiter(void 0, void 0, void 0, function* () {
+        const name = getTemplateName(t);
         const targetTemplate = templateByName[t];
         const outdated = getOutdatedVersions(targetTemplate, preserveVersionCount);
         return yield Promise.all(outdated.map((v) => __awaiter(void 0, void 0, void 0, function* () {
             var _a;
-            log(`  - Deleting old version: ${t} (${v})`, dryRun);
+            log(`  - Deleting old version: ${name} (${v})`, dryRun);
             if (dryRun) {
                 return Promise.resolve();
             }

@@ -39,14 +39,26 @@ const log = (message: string, dryRun = false) => {
   core.info(`${dryRun ? '[DRY RUN] ' : ''}${message}`)
 }
 
+const createTemplatePrefixer = (prefix: string) => (name: string) =>
+  `${prefix}${name}`
+
+const createTemplatePrefixRemover = (prefix: string) => (name: string) =>
+  name.replace(new RegExp(`^${prefix}`), '')
+
 export const sync = async (
   {created, updated, deleted, renamed}: Changeset,
   templateMap: {[tplName: string]: string},
+  templatePrefix = '',
   preserveVersionCount = 2,
   dryRun = false
 ) => {
+  const getTemplateName = createTemplatePrefixer(templatePrefix)
+  const removeTemplatePrefix = createTemplatePrefixRemover(templatePrefix)
+
   const {templates} = await fetchTemplates()
-  const existingTemplateNames = templates.map(t => t.name)
+  const existingTemplateNames = templates
+    .filter(t => t.name.startsWith(templatePrefix))
+    .map(t => removeTemplatePrefix(t.name))
 
   // templates to create
   const createTemplates = [
@@ -83,17 +95,18 @@ export const sync = async (
   // create
   const createdResponses = await Promise.all(
     createTemplates.map(async t => {
-      log(`  - Creating ${t}`, dryRun)
+      const name = getTemplateName(t)
+      log(`  - Creating ${name}`, dryRun)
 
       if (dryRun) {
         return Promise.resolve(({
-          id: t,
-          name: t,
+          id: name,
+          name,
           versions: []
         } as unknown) as Template)
       }
 
-      return await createTemplate(t)
+      return await createTemplate(name)
     })
   )
 
@@ -102,26 +115,29 @@ export const sync = async (
   // rename
   const renamedResponses = await Promise.all(
     renamedTemplates.map(async ({from, to}) => {
-      log(`  - Renaming template: ${from} ▶ ${to}`, dryRun)
+      const fromName = getTemplateName(from)
+      const toName = getTemplateName(to)
+
+      log(`  - Renaming template: ${fromName} ▶ ${toName}`, dryRun)
 
       const targetTemplate = templateByName[from]
 
       if (dryRun) {
         return Promise.resolve(({
-          id: to,
-          name: to,
+          id: toName,
+          name: toName,
           versions: []
         } as unknown) as Template)
       }
 
-      return await updateTemplate(targetTemplate.id, to)
+      return await updateTemplate(targetTemplate.id, toName)
     })
   )
 
   // update templates index
   for (const t of [...createdResponses, ...renamedResponses]) {
     if (t) {
-      templateByName[t.name] = t
+      templateByName[removeTemplatePrefix(t.name)] = t
     }
   }
 
@@ -131,10 +147,11 @@ export const sync = async (
   // create new versions
   await Promise.all(
     updateVersionTemplates.map(async t => {
+      const name = getTemplateName(t)
       const targetTemplate = templateByName[t]
       const nextVer = getNextVersion(targetTemplate)
 
-      log(`  - Creating new version for template: ${t} (${nextVer})`, dryRun)
+      log(`  - Creating new version for template: ${name} (${nextVer})`, dryRun)
 
       if (dryRun) {
         return Promise.resolve()
@@ -166,12 +183,13 @@ export const sync = async (
   // delete old versions
   await Promise.all(
     updateVersionTemplates.map(async t => {
+      const name = getTemplateName(t)
       const targetTemplate = templateByName[t]
       const outdated = getOutdatedVersions(targetTemplate, preserveVersionCount)
 
       return await Promise.all(
         outdated.map(async v => {
-          log(`  - Deleting old version: ${t} (${v})`, dryRun)
+          log(`  - Deleting old version: ${name} (${v})`, dryRun)
 
           if (dryRun) {
             return Promise.resolve()

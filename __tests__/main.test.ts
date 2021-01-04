@@ -307,6 +307,7 @@ test('test runs', () => {
   process.env['ACTIONS_RUNNER_DEBUG'] = 'true'
   process.env['INPUT_TEMPLATESDIR'] = TEMPLATES_DIR
   process.env['INPUT_PARTIALSDIR'] = PARTIALS_DIR
+  process.env['INPUT_TEMPLATEPREFIX'] = 'prefix/'
   process.env['INPUT_DRYRUN'] = 'true'
   process.env['INPUT_FORCESYNCALL'] = 'true'
   process.env['GITHUB_REPOSITORY'] = 'nanopx/action-sendgrid-sync'

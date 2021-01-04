@@ -9,6 +9,7 @@ import {sync} from './syncSendgrid'
 const SENDGRID_API_KEY: string = core.getInput('sendgridApiKey')
 const TEMPLATES_DIR: string = core.getInput('templatesDir')
 const PARTIALS_DIR: string = core.getInput('partialsDir')
+const TEMPLATE_PREFIX: string = core.getInput('templatePrefix') || ''
 const PRESERVE_VERSIONS = Number(core.getInput('preserveVersions') || '2')
 const DRY_RUN = core.getInput('dryRun') === 'true'
 const FORCE_SYNC_ALL = core.getInput('forceSyncAll') === 'true'
@@ -41,7 +42,7 @@ async function run(): Promise<void> {
     const changes = generateChangeset(
       FORCE_SYNC_ALL
         ? {
-            // Mark all templates as modified
+            // [Force Sync] Mark all templates as modified
             modified: (await findTemplates(TEMPLATES_DIR, PARTIALS_DIR))
               .templates
           }
@@ -61,7 +62,13 @@ async function run(): Promise<void> {
       {} as {[name: string]: string}
     )
 
-    await sync(changes, templateMap, PRESERVE_VERSIONS, DRY_RUN)
+    await sync(
+      changes,
+      templateMap,
+      TEMPLATE_PREFIX,
+      PRESERVE_VERSIONS,
+      DRY_RUN
+    )
 
     core.info('\nSendGrid sync done!')
   } catch (error) {

@@ -14,6 +14,10 @@ inputs:
   partialsDir:
     required: false
     description: 'Partials directory'
+  templatePrefix:
+    required: false
+    description: 'Template name prefixes'
+    default: ''
   preserveVersions:
     required: false
     description: 'Number of versions to preserve per template'
