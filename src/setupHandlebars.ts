@@ -135,6 +135,7 @@ export interface Changeset {
   created: string[]
   updated: string[]
   deleted: string[]
+  renamed: {from: string; to: string}[]
 }
 
 export const createGenerateChangeset = (
@@ -146,12 +147,16 @@ export const createGenerateChangeset = (
 ) => ({
   added = [],
   modified = [],
-  deleted = []
+  deleted = [],
+  renamed = []
 }: {
   added?: string[]
   modified?: string[]
   deleted?: string[]
+  renamed?: {from: string; to: string}[]
 }): Changeset => {
+  const renamedNewFiles = renamed.map(r => r.to)
+
   const addedTemplates = templates
     .filter(t => added.includes(t))
     .map(t => getTemplateName(templatesDir, t))
@@ -161,29 +166,37 @@ export const createGenerateChangeset = (
   const deletedTemplates = templates
     .filter(t => deleted.includes(t))
     .map(t => getTemplateName(templatesDir, t))
+  const renamedTemplates = renamed.map(({from, to}) => ({
+    from: getTemplateName(templatesDir, from),
+    to: getTemplateName(templatesDir, to)
+  }))
 
   const addedPartials = partials.filter(t => added.includes(t))
   const modifiedPartials = partials.filter(t => modified.includes(t))
   const deletedPartials = partials.filter(t => deleted.includes(t))
+  const renamedPartials = partials.filter(t => renamedNewFiles.includes(t))
 
   const updatedTemplates = [
     ...new Set([
       ...modifiedTemplates,
-      // Update template with added/modified/deleted partials
-      ...[...addedPartials, ...modifiedPartials, ...deletedPartials].reduce(
-        (acc, p) => {
-          const name = getTemplateName(partialsDir, p)
-          return [...acc, ...partialDeps[name]]
-        },
-        [] as string[]
-      )
+      // Update template with added/modified/deleted/renamed partials
+      ...[
+        ...addedPartials,
+        ...modifiedPartials,
+        ...deletedPartials,
+        ...renamedPartials
+      ].reduce((acc, p) => {
+        const name = getTemplateName(partialsDir, p)
+        return [...acc, ...partialDeps[name]]
+      }, [] as string[])
     ])
   ].filter(t => !addedTemplates.includes(t) && !deletedTemplates.includes(t))
 
   return {
     created: addedTemplates,
     updated: updatedTemplates,
-    deleted: deletedTemplates
+    deleted: deletedTemplates,
+    renamed: renamedTemplates
   }
 }
 

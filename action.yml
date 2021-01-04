@@ -11,6 +11,13 @@ inputs:
   partialsDir:
     required: false
     description: 'Partials directory'
+  preserveVersions:
+    required: false
+    description: 'Number of versions to preserve per template'
+    default: '2'
+  dryRun:
+    required: false
+    description: 'Dry run'
 runs:
   using: 'node12'
   main: 'dist/index.js'

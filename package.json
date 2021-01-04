@@ -1,6 +1,6 @@
 {
   "name": "action-sendgrid-sync",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "private": true,
   "description": "GitHub action to sync local handlebars file with sendgrid",
   "main": "lib/main.js",
