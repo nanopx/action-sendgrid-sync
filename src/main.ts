@@ -49,6 +49,10 @@ async function run(): Promise<void> {
 
     core.info('\nSendGrid sync done!')
   } catch (error) {
+    if (process.env.NODE_ENV === 'test') {
+      // eslint-disable-next-line no-console
+      console.error(error)
+    }
     core.setFailed(error.message)
   }
 }
