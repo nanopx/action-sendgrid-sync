@@ -308,9 +308,11 @@ test('test runs', () => {
   process.env['INPUT_TEMPLATESDIR'] = TEMPLATES_DIR
   process.env['INPUT_PARTIALSDIR'] = PARTIALS_DIR
   process.env['INPUT_DRYRUN'] = 'true'
+  process.env['INPUT_GITHUBTOKEN'] = '4ce46bf246e0017d1e291eabf4f2551bce543e87'
   process.env['GITHUB_REPOSITORY'] = 'nanopx/action-sendgrid-sync'
   process.env['GITHUB_SHA'] = TEST_SHA
-  process.env['GITHUB_REF'] = 'refs/heads/main'
+  process.env['GITHUB_REF'] = TEST_SHA //'refs/heads/main'
+  process.env['GITHUB_EVENT_NAME'] = 'push'
 
   const np = process.execPath
   const ip = path.join(__dirname, '..', 'lib', 'main.js')

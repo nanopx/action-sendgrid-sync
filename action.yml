@@ -2,6 +2,9 @@ name: 'SendGrid sync'
 description: 'Sync local handlebars with SendGrid'
 author: 'nanopx'
 inputs:
+  githubToken:
+    required: true
+    description: ' GitHub personal access token'
   sendgridApiKey:
     required: true
     description: 'SendGrid API Key'

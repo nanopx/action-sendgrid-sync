@@ -6,18 +6,22 @@ import {getTemplateDiffFromCommit} from './getTemplateDiffFromCommit'
 import {setupClient} from './sendgrid'
 import {sync} from './syncSendgrid'
 
-const ref = github.context.ref
-// const {owner, repo} = github.context.repo
 const SENDGRID_API_KEY: string = core.getInput('sendgridApiKey')
 const TEMPLATES_DIR: string = core.getInput('templatesDir')
 const PARTIALS_DIR: string = core.getInput('partialsDir')
 const PRESERVE_VERSIONS = Number(core.getInput('preserveVersions') || '2')
 const DRY_RUN = core.getInput('dryRun') === 'true'
+const ref = github.context.ref
 
 setupClient(SENDGRID_API_KEY)
 
 async function run(): Promise<void> {
   try {
+    if (github.context.eventName !== 'push') {
+      core.info('SendGrid Sync currently only works on push events.')
+      return
+    }
+
     core.info('Initializing SendGrid sync...')
 
     if (DRY_RUN) {

@@ -1,51 +1,60 @@
 import path from 'path'
-import git from 'nodegit'
+import * as github from '@actions/github'
+import * as core from '@actions/core'
 
-export const getTemplateDiffFromCommit = async (
-  reference: string
-): Promise<{
+const {owner, repo} = github.context.repo
+
+const gh = github.getOctokit(core.getInput('githubToken'))
+
+interface TemplateChanges {
   added: string[]
   modified: string[]
   deleted: string[]
   renamed: {from: string; to: string}[]
-}> => {
-  const repo = await git.Repository.open(process.cwd())
+}
 
-  const commit = await repo.getReferenceCommit(reference)
+export const getTemplateDiffFromCommit = async (
+  ref: string
+): Promise<TemplateChanges> => {
+  const {data} = await gh.repos.getCommit({
+    owner,
+    repo,
+    ref
+  })
 
-  const diffList = await commit.getDiff()
-
-  const patchList = (
-    await Promise.all(diffList.map(async d => d.patches()))
-  ).reduce((acc, p) => [...acc, ...p], [])
-
-  const {added, modified, deleted, renamed} = patchList.reduce(
-    (acc, p) => {
-      const filePath = path.resolve(process.cwd(), p.newFile().path())
+  return (data?.files ?? []).reduce(
+    (acc, file) => {
+      const filePath = path.resolve(process.cwd(), file.filename as string)
       if (!filePath.endsWith('.hbs')) return acc
-
       return {
-        added: p.isAdded() ? [...acc.added, filePath] : acc.added,
-        modified: p.isModified() ? [...acc.modified, filePath] : acc.modified,
-        deleted: p.isDeleted() ? [...acc.deleted, filePath] : acc.deleted,
-        renamed: p.isRenamed()
-          ? [
-              ...acc.renamed,
-              {
-                from: path.resolve(process.cwd(), p.oldFile().path()),
-                to: filePath
-              }
-            ]
-          : acc.renamed
+        ...acc,
+        added: file.status === 'added' ? [...acc.added, filePath] : acc.added,
+        modified:
+          file.status === 'modified'
+            ? [...acc.modified, filePath]
+            : acc.modified,
+        deleted:
+          file.status === 'removed' ? [...acc.deleted, filePath] : acc.deleted,
+        renamed:
+          file.status === 'renamed'
+            ? [
+                ...acc.renamed,
+                {
+                  from: path.resolve(
+                    process.cwd(),
+                    file.previous_filename as string
+                  ),
+                  to: filePath
+                }
+              ]
+            : acc.renamed
       }
     },
     {
-      added: [] as string[],
-      modified: [] as string[],
-      deleted: [] as string[],
-      renamed: [] as {from: string; to: string}[]
-    }
+      added: [],
+      modified: [],
+      deleted: [],
+      renamed: []
+    } as TemplateChanges
   )
-
-  return {added, modified, deleted, renamed}
 }
