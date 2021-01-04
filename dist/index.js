@@ -44,9 +44,9 @@ const path_1 = __importDefault(__webpack_require__(5622));
 const github = __importStar(__webpack_require__(5438));
 const core = __importStar(__webpack_require__(2186));
 const { owner, repo } = github.context.repo;
-const gh = github.getOctokit(core.getInput('githubToken'));
 const getTemplateDiffFromCommit = (ref) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
+    const gh = github.getOctokit(core.getInput('githubToken'));
     const { data } = yield gh.repos.getCommit({
         owner,
         repo,
@@ -125,6 +125,7 @@ const TEMPLATES_DIR = core.getInput('templatesDir');
 const PARTIALS_DIR = core.getInput('partialsDir');
 const PRESERVE_VERSIONS = Number(core.getInput('preserveVersions') || '2');
 const DRY_RUN = core.getInput('dryRun') === 'true';
+const FORCE_SYNC_ALL = core.getInput('forceSyncAll') === 'true';
 const ref = github.context.ref;
 sendgrid_1.setupClient(SENDGRID_API_KEY);
 function run() {
@@ -135,12 +136,20 @@ function run() {
                 return;
             }
             core.info('Initializing SendGrid sync...');
+            if (FORCE_SYNC_ALL) {
+                core.info(`[FORCE SYNC] Force sync mode enabled - syncing all templates`);
+            }
             if (DRY_RUN) {
                 core.info(`[DRY RUN] Dry run mode enabled`);
             }
             const { compileTemplate, generateChangeset } = yield setupHandlebars_1.setup(TEMPLATES_DIR, PARTIALS_DIR);
-            const templateDiff = yield getTemplateDiffFromCommit_1.getTemplateDiffFromCommit(ref);
-            const changes = generateChangeset(templateDiff);
+            const changes = generateChangeset(FORCE_SYNC_ALL
+                ? {
+                    // Mark all templates as modified
+                    modified: (yield setupHandlebars_1.findTemplates(TEMPLATES_DIR, PARTIALS_DIR))
+                        .templates
+                }
+                : yield getTemplateDiffFromCommit_1.getTemplateDiffFromCommit(ref));
             const changedTemplates = [...changes.created, ...changes.updated];
             const templateMap = (yield Promise.all(changedTemplates.map((tplName) => __awaiter(this, void 0, void 0, function* () {
                 return (() => __awaiter(this, void 0, void 0, function* () { return [tplName, yield compileTemplate(tplName)]; }))();
