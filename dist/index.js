@@ -542,8 +542,11 @@ const sync = ({ created, updated, deleted, renamed }, templateMap, preserveVersi
             })
             : Promise.resolve();
     })));
-    updateVersionTemplates.length &&
-        log('Deleting old template versions:', dryRun);
+    const hasOutdated = Boolean(updateVersionTemplates.find(t => {
+        const targetTemplate = templateByName[t];
+        return (getOutdatedVersions(targetTemplate, preserveVersionCount).length !== 0);
+    }));
+    hasOutdated && log('Deleting old template versions:', dryRun);
     // delete old versions
     yield Promise.all(updateVersionTemplates.map((t) => __awaiter(void 0, void 0, void 0, function* () {
         const targetTemplate = templateByName[t];

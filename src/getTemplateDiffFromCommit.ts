@@ -4,8 +4,6 @@ import * as core from '@actions/core'
 
 const {owner, repo} = github.context.repo
 
-const gh = github.getOctokit(core.getInput('githubToken'))
-
 interface TemplateChanges {
   added: string[]
   modified: string[]
@@ -16,6 +14,8 @@ interface TemplateChanges {
 export const getTemplateDiffFromCommit = async (
   ref: string
 ): Promise<TemplateChanges> => {
+  const gh = github.getOctokit(core.getInput('githubToken'))
+
   const {data} = await gh.repos.getCommit({
     owner,
     repo,

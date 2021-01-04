@@ -21,6 +21,9 @@ inputs:
   dryRun:
     required: false
     description: 'Dry run'
+  forceSyncAll:
+    required: false
+    description: 'Force sync all files in templates dir (Useful for initial synchronization)'
 runs:
   using: 'node12'
   main: 'dist/index.js'
