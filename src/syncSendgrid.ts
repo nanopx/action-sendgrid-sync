@@ -152,8 +152,16 @@ export const sync = async (
     })
   )
 
-  updateVersionTemplates.length &&
-    log('Deleting old template versions:', dryRun)
+  const hasOutdated = Boolean(
+    updateVersionTemplates.find(t => {
+      const targetTemplate = templateByName[t]
+      return (
+        getOutdatedVersions(targetTemplate, preserveVersionCount).length !== 0
+      )
+    })
+  )
+
+  hasOutdated && log('Deleting old template versions:', dryRun)
 
   // delete old versions
   await Promise.all(
