@@ -124,6 +124,7 @@ const SENDGRID_API_KEY = core.getInput('sendgridApiKey');
 const TEMPLATES_DIR = core.getInput('templatesDir');
 const PARTIALS_DIR = core.getInput('partialsDir');
 const TEMPLATE_PREFIX = core.getInput('templatePrefix') || '';
+const SUBJECT_TEMPLATE = core.getInput('subjectTemplate') || '{{subject}}';
 const PRESERVE_VERSIONS = Number(core.getInput('preserveVersions') || '2');
 const DRY_RUN = core.getInput('dryRun') === 'true';
 const FORCE_SYNC_ALL = core.getInput('forceSyncAll') === 'true';
@@ -155,7 +156,7 @@ function run() {
             const templateMap = (yield Promise.all(changedTemplates.map((tplName) => __awaiter(this, void 0, void 0, function* () {
                 return (() => __awaiter(this, void 0, void 0, function* () { return [tplName, yield compileTemplate(tplName)]; }))();
             })))).reduce((acc, [name, content]) => (Object.assign(Object.assign({}, acc), { [name]: content })), {});
-            yield syncSendgrid_1.sync(changes, templateMap, TEMPLATE_PREFIX, PRESERVE_VERSIONS, DRY_RUN);
+            yield syncSendgrid_1.sync(changes, templateMap, TEMPLATE_PREFIX, SUBJECT_TEMPLATE, PRESERVE_VERSIONS, DRY_RUN);
             core.info('\nSendGrid sync done!');
         }
         catch (error) {
@@ -479,7 +480,7 @@ const log = (message, dryRun = false) => {
 };
 const createTemplatePrefixer = (prefix) => (name) => `${prefix}${name}`;
 const createTemplatePrefixRemover = (prefix) => (name) => name.replace(new RegExp(`^${prefix}`), '');
-const sync = ({ created, updated, deleted, renamed }, templateMap, templatePrefix = '', preserveVersionCount = 2, dryRun = false) => __awaiter(void 0, void 0, void 0, function* () {
+const sync = ({ created, updated, deleted, renamed }, templateMap, templatePrefix = '', subjectTemplate = '{{subject}}', preserveVersionCount = 2, dryRun = false) => __awaiter(void 0, void 0, void 0, function* () {
     const getTemplateName = createTemplatePrefixer(templatePrefix);
     const removeTemplatePrefix = createTemplatePrefixRemover(templatePrefix);
     const { templates } = yield sendgrid_1.fetchTemplates();
@@ -555,7 +556,7 @@ const sync = ({ created, updated, deleted, renamed }, templateMap, templatePrefi
         return targetTemplate
             ? sendgrid_1.createTemplateVersion(targetTemplate.id, {
                 name: nextVer,
-                subject: nextVer,
+                subject: subjectTemplate,
                 active: 1,
                 html_content: templateMap[t],
                 plain_content: ''

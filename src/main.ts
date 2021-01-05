@@ -10,6 +10,8 @@ const SENDGRID_API_KEY: string = core.getInput('sendgridApiKey')
 const TEMPLATES_DIR: string = core.getInput('templatesDir')
 const PARTIALS_DIR: string = core.getInput('partialsDir')
 const TEMPLATE_PREFIX: string = core.getInput('templatePrefix') || ''
+const SUBJECT_TEMPLATE: string =
+  core.getInput('subjectTemplate') || '{{subject}}'
 const PRESERVE_VERSIONS = Number(core.getInput('preserveVersions') || '2')
 const DRY_RUN = core.getInput('dryRun') === 'true'
 const FORCE_SYNC_ALL = core.getInput('forceSyncAll') === 'true'
@@ -66,6 +68,7 @@ async function run(): Promise<void> {
       changes,
       templateMap,
       TEMPLATE_PREFIX,
+      SUBJECT_TEMPLATE,
       PRESERVE_VERSIONS,
       DRY_RUN
     )

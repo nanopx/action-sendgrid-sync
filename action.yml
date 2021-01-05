@@ -18,6 +18,10 @@ inputs:
     required: false
     description: 'Template name prefixes'
     default: ''
+  subjectTemplate:
+    required: false
+    description: 'Subject template'
+    default: '{{subject}}'
   preserveVersions:
     required: false
     description: 'Number of versions to preserve per template'

@@ -49,6 +49,7 @@ export const sync = async (
   {created, updated, deleted, renamed}: Changeset,
   templateMap: {[tplName: string]: string},
   templatePrefix = '',
+  subjectTemplate = '{{subject}}',
   preserveVersionCount = 2,
   dryRun = false
 ) => {
@@ -160,7 +161,7 @@ export const sync = async (
       return targetTemplate
         ? createTemplateVersion(targetTemplate.id, {
             name: nextVer,
-            subject: nextVer,
+            subject: subjectTemplate,
             active: 1,
             html_content: templateMap[t],
             plain_content: ''
