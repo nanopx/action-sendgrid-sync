@@ -52,7 +52,7 @@ export const sync = async (
   subjectTemplate = '{{subject}}',
   preserveVersionCount = 2,
   dryRun = false
-) => {
+): Promise<{[tplName: string]: string}> => {
   const getTemplateName = createTemplatePrefixer(templatePrefix)
   const removeTemplatePrefix = createTemplatePrefixRemover(templatePrefix)
 
@@ -95,13 +95,13 @@ export const sync = async (
 
   // create
   const createdResponses = await Promise.all(
-    createTemplates.map(async t => {
+    createTemplates.map(async (t, i) => {
       const name = getTemplateName(t)
       log(`  - Creating ${name}`, dryRun)
 
       if (dryRun) {
         return Promise.resolve(({
-          id: name,
+          id: `sendgrid-dummy-id-create-${name}-${i + 1}`,
           name,
           versions: []
         } as unknown) as Template)
@@ -115,7 +115,7 @@ export const sync = async (
 
   // rename
   const renamedResponses = await Promise.all(
-    renamedTemplates.map(async ({from, to}) => {
+    renamedTemplates.map(async ({from, to}, i) => {
       const fromName = getTemplateName(from)
       const toName = getTemplateName(to)
 
@@ -125,7 +125,7 @@ export const sync = async (
 
       if (dryRun) {
         return Promise.resolve(({
-          id: toName,
+          id: `sendgrid-dummy-id-rename-${toName}-${i + 1}`,
           name: toName,
           versions: []
         } as unknown) as Template)
@@ -140,6 +140,11 @@ export const sync = async (
     if (t) {
       templateByName[removeTemplatePrefix(t.name)] = t
     }
+  }
+
+  // remove old, renamed templates
+  for (const {from} of renamedTemplates) {
+    delete templateByName[from]
   }
 
   updateVersionTemplates.length &&
@@ -221,5 +226,16 @@ export const sync = async (
         ? deleteTemplate(targetTemplate.id)
         : Promise.resolve()
     })
+  )
+
+  return Object.keys(templateByName).reduce(
+    (acc, tplName) =>
+      deleteTemplates.includes(tplName)
+        ? acc
+        : {
+            ...acc,
+            [tplName]: templateByName[tplName].id
+          },
+    {}
   )
 }

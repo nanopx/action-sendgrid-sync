@@ -1,10 +1,13 @@
 name: 'SendGrid sync'
-description: 'Sync local handlebars with SendGrid'
+description: 'Sync handlebars with SendGrid'
 author: 'nanopx'
+branding:
+  color: red
+  icon: refresh-cw
 inputs:
   githubToken:
     required: true
-    description: ' GitHub personal access token'
+    description: 'GitHub personal access token'
   sendgridApiKey:
     required: true
     description: 'SendGrid API Key'
@@ -32,6 +35,9 @@ inputs:
   forceSyncAll:
     required: false
     description: 'Force sync all files in templates dir (Useful for initial synchronization)'
+outputs:
+  sendgridTemplateIdMapping:
+    description: JSON string which contains a mapping of template name(key) and template id(value)
 runs:
   using: 'node12'
   main: 'dist/index.js'

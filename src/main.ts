@@ -64,7 +64,7 @@ async function run(): Promise<void> {
       {} as {[name: string]: string}
     )
 
-    await sync(
+    const templateIdMap = await sync(
       changes,
       templateMap,
       TEMPLATE_PREFIX,
@@ -72,6 +72,8 @@ async function run(): Promise<void> {
       PRESERVE_VERSIONS,
       DRY_RUN
     )
+
+    core.setOutput('sendgridTemplateIdMapping', JSON.stringify(templateIdMap))
 
     core.info('\nSendGrid sync done!')
   } catch (error) {
