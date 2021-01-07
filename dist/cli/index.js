@@ -467,7 +467,9 @@ const sync = ({ created, updated, deleted, renamed }, templateMap, { templatePre
     const deleteTemplates = [
         ...deleted.filter(t => existingTemplateNames.includes(t))
     ];
-    const templateByName = templates.reduce((acc, t) => (Object.assign(Object.assign({}, acc), { [t.name]: t })), {});
+    const templateByName = templates
+        .filter(t => t.name.startsWith(templatePrefix))
+        .reduce((acc, t) => (Object.assign(Object.assign({}, acc), { [removeTemplatePrefix(t.name)]: t })), {});
     createTemplates.length && logger('Creating templates:', dryRun);
     // create
     const createdResponses = yield Promise.all(createTemplates.map((t, i) => __awaiter(void 0, void 0, void 0, function* () {

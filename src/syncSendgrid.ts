@@ -91,13 +91,15 @@ export const sync = async (
     ...deleted.filter(t => existingTemplateNames.includes(t))
   ]
 
-  const templateByName = templates.reduce(
-    (acc, t) => ({
-      ...acc,
-      [t.name]: t
-    }),
-    {} as {[name: string]: Template}
-  )
+  const templateByName = templates
+    .filter(t => t.name.startsWith(templatePrefix))
+    .reduce(
+      (acc, t) => ({
+        ...acc,
+        [removeTemplatePrefix(t.name)]: t
+      }),
+      {} as {[name: string]: Template}
+    )
 
   createTemplates.length && logger('Creating templates:', dryRun)
 
