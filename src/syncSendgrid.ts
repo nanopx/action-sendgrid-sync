@@ -37,12 +37,14 @@ const createTemplatePrefixer = (prefix: string) => (name: string) =>
 const createTemplatePrefixRemover = (prefix: string) => (name: string) =>
   name.replace(new RegExp(`^${prefix}`), '')
 
+type Logger = (message: string, dryRun: boolean) => void
+
 export interface SyncOptions {
   templatePrefix?: string
   subjectTemplate?: string
   preserveVersions?: number
   dryRun?: boolean
-  logger?: (message: string, dryRun: boolean) => void
+  logger?: Logger
 }
 
 const defaultLogger = (message: string, dryRun: boolean) => {
