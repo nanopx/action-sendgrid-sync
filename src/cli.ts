@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import {writeFileSync} from 'fs'
 import path from 'path'
 import meow from 'meow'

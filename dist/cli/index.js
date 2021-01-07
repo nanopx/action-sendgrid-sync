@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 require('./sourcemap-register.js');module.exports =
 /******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
