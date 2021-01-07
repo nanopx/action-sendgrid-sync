@@ -140,7 +140,7 @@ export interface Changeset {
 
 export const createGenerateChangeset = (
   templatesDir: string,
-  partialsDir: string,
+  partialsDir: string | undefined = undefined,
   templates: string[],
   partials: string[],
   {partialDeps}: DependencyMaps
@@ -180,15 +180,17 @@ export const createGenerateChangeset = (
     ...new Set([
       ...modifiedTemplates,
       // Update template with added/modified/deleted/renamed partials
-      ...[
-        ...addedPartials,
-        ...modifiedPartials,
-        ...deletedPartials,
-        ...renamedPartials
-      ].reduce((acc, p) => {
-        const name = getTemplateName(partialsDir, p)
-        return [...acc, ...partialDeps[name]]
-      }, [] as string[])
+      ...(partialsDir
+        ? [
+            ...addedPartials,
+            ...modifiedPartials,
+            ...deletedPartials,
+            ...renamedPartials
+          ].reduce((acc, p) => {
+            const name = getTemplateName(partialsDir, p)
+            return [...acc, ...partialDeps[name]]
+          }, [] as string[])
+        : [])
     ])
   ].filter(t => !addedTemplates.includes(t) && !deletedTemplates.includes(t))
 
@@ -200,7 +202,7 @@ export const createGenerateChangeset = (
   }
 }
 
-export const setup = async (templatesDir: string, partialsDir: string) => {
+export const setup = async (templatesDir: string, partialsDir?: string) => {
   const {templates, partials} = await findTemplates(templatesDir, partialsDir)
 
   const {templateDeps, partialDeps} = await getDependencyMaps(
@@ -208,7 +210,9 @@ export const setup = async (templatesDir: string, partialsDir: string) => {
     templates
   )
 
-  await loadPartials(partialsDir, partials)
+  if (partialsDir) {
+    await loadPartials(partialsDir, partials)
+  }
 
   return {
     templates,

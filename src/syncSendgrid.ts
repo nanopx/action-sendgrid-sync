@@ -1,4 +1,3 @@
-import * as core from '@actions/core'
 import {Changeset} from './setupHandlebars'
 import {
   createTemplate,
@@ -27,16 +26,9 @@ const getNextVersion = (template: Template | undefined) => {
     : 'v1'
 }
 
-const getOutdatedVersions = (
-  template: Template,
-  preserveVersionCount: number
-) => {
+const getOutdatedVersions = (template: Template, preserveVersions: number) => {
   const versions = getTemplateVersionNames(template)
-  return versions.slice(0, versions.length + 1 - preserveVersionCount)
-}
-
-const log = (message: string, dryRun = false) => {
-  core.info(`${dryRun ? '[DRY RUN] ' : ''}${message}`)
+  return versions.slice(0, versions.length + 1 - preserveVersions)
 }
 
 const createTemplatePrefixer = (prefix: string) => (name: string) =>
@@ -45,13 +37,29 @@ const createTemplatePrefixer = (prefix: string) => (name: string) =>
 const createTemplatePrefixRemover = (prefix: string) => (name: string) =>
   name.replace(new RegExp(`^${prefix}`), '')
 
+export interface SyncOptions {
+  templatePrefix?: string
+  subjectTemplate?: string
+  preserveVersions?: number
+  dryRun?: boolean
+  logger?: (message: string, dryRun: boolean) => void
+}
+
+const defaultLogger = (message: string, dryRun: boolean) => {
+  // eslint-disable-next-line no-console
+  console.log(`${dryRun ? '[DRY RUN] ' : ''}${message}`)
+}
+
 export const sync = async (
   {created, updated, deleted, renamed}: Changeset,
   templateMap: {[tplName: string]: string},
-  templatePrefix = '',
-  subjectTemplate = '{{subject}}',
-  preserveVersionCount = 2,
-  dryRun = false
+  {
+    templatePrefix = '',
+    subjectTemplate = '{{ subject }}',
+    preserveVersions = 2,
+    dryRun = false,
+    logger = defaultLogger
+  }: SyncOptions = {}
 ): Promise<{[tplName: string]: string}> => {
   const getTemplateName = createTemplatePrefixer(templatePrefix)
   const removeTemplatePrefix = createTemplatePrefixRemover(templatePrefix)
@@ -91,13 +99,13 @@ export const sync = async (
     {} as {[name: string]: Template}
   )
 
-  createTemplates.length && log('Creating templates:', dryRun)
+  createTemplates.length && logger('Creating templates:', dryRun)
 
   // create
   const createdResponses = await Promise.all(
     createTemplates.map(async (t, i) => {
       const name = getTemplateName(t)
-      log(`  - Creating ${name}`, dryRun)
+      logger(`  - Creating ${name}`, dryRun)
 
       if (dryRun) {
         return Promise.resolve(({
@@ -111,7 +119,7 @@ export const sync = async (
     })
   )
 
-  renamedTemplates.length && log('Renaming templates:', dryRun)
+  renamedTemplates.length && logger('Renaming templates:', dryRun)
 
   // rename
   const renamedResponses = await Promise.all(
@@ -119,7 +127,7 @@ export const sync = async (
       const fromName = getTemplateName(from)
       const toName = getTemplateName(to)
 
-      log(`  - Renaming template: ${fromName} ▶ ${toName}`, dryRun)
+      logger(`  - Renaming template: ${fromName} ▶ ${toName}`, dryRun)
 
       const targetTemplate = templateByName[from]
 
@@ -148,7 +156,7 @@ export const sync = async (
   }
 
   updateVersionTemplates.length &&
-    log('Creating new template versions:', dryRun)
+    logger('Creating new template versions:', dryRun)
 
   // create new versions
   await Promise.all(
@@ -157,7 +165,10 @@ export const sync = async (
       const targetTemplate = templateByName[t]
       const nextVer = getNextVersion(targetTemplate)
 
-      log(`  - Creating new version for template: ${name} (${nextVer})`, dryRun)
+      logger(
+        `  - Creating new version for template: ${name} (${nextVer})`,
+        dryRun
+      )
 
       if (dryRun) {
         return Promise.resolve()
@@ -178,24 +189,22 @@ export const sync = async (
   const hasOutdated = Boolean(
     updateVersionTemplates.find(t => {
       const targetTemplate = templateByName[t]
-      return (
-        getOutdatedVersions(targetTemplate, preserveVersionCount).length !== 0
-      )
+      return getOutdatedVersions(targetTemplate, preserveVersions).length !== 0
     })
   )
 
-  hasOutdated && log('Deleting old template versions:', dryRun)
+  hasOutdated && logger('Deleting old template versions:', dryRun)
 
   // delete old versions
   await Promise.all(
     updateVersionTemplates.map(async t => {
       const name = getTemplateName(t)
       const targetTemplate = templateByName[t]
-      const outdated = getOutdatedVersions(targetTemplate, preserveVersionCount)
+      const outdated = getOutdatedVersions(targetTemplate, preserveVersions)
 
       return await Promise.all(
         outdated.map(async v => {
-          log(`  - Deleting old version: ${name} (${v})`, dryRun)
+          logger(`  - Deleting old version: ${name} (${v})`, dryRun)
 
           if (dryRun) {
             return Promise.resolve()
@@ -216,7 +225,7 @@ export const sync = async (
     deleteTemplates.map(async t => {
       const targetTemplate = templateByName[t]
 
-      log(`Deleting template: ${t}`, dryRun)
+      logger(`Deleting template: ${t}`, dryRun)
 
       if (dryRun) {
         return Promise.resolve()

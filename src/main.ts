@@ -19,6 +19,10 @@ const ref = github.context.ref
 
 setupClient(SENDGRID_API_KEY)
 
+const logger = (message: string, dryRun = false) => {
+  core.info(`${dryRun ? '[DRY RUN] ' : ''}${message}`)
+}
+
 async function run(): Promise<void> {
   try {
     if (github.context.eventName !== 'push') {
@@ -64,18 +68,17 @@ async function run(): Promise<void> {
       {} as {[name: string]: string}
     )
 
-    const templateIdMap = await sync(
-      changes,
-      templateMap,
-      TEMPLATE_PREFIX,
-      SUBJECT_TEMPLATE,
-      PRESERVE_VERSIONS,
-      DRY_RUN
-    )
+    const templateIdMap = await sync(changes, templateMap, {
+      templatePrefix: TEMPLATE_PREFIX,
+      subjectTemplate: SUBJECT_TEMPLATE,
+      preserveVersions: PRESERVE_VERSIONS,
+      dryRun: DRY_RUN,
+      logger
+    })
 
     core.setOutput('sendgridTemplateIdMapping', JSON.stringify(templateIdMap))
 
-    core.info('\nSendGrid sync done!')
+    core.info('\nSendGrid Sync completed.')
   } catch (error) {
     if (process.env.NODE_ENV === 'test') {
       // eslint-disable-next-line no-console

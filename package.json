@@ -1,17 +1,25 @@
 {
-  "name": "action-sendgrid-sync",
-  "version": "0.1.3",
+  "name": "sendgrid-sync",
+  "version": "0.2.0",
   "private": true,
   "description": "GitHub action to sync handlebars template with sendgrid",
-  "main": "lib/main.js",
+  "main": "lib/syncSendgrid.js",
+  "bin": "dist/cli/index.js",
+  "files": [
+    "lib",
+    "dist"
+  ],
   "scripts": {
     "build": "tsc",
     "format": "prettier --write **/*.ts",
     "format-check": "prettier --check **/*.ts",
+    "clean": "rimraf ./lib && rimraf ./dist",
     "lint": "eslint src/**/*.ts",
     "package": "ncc build --source-map --license licenses.txt",
+    "package-cli": "ncc build lib/cli.js -o dist/cli --source-map --license licenses.txt",
     "test": "jest",
-    "all": "npm run build && npm run format && npm run lint && npm run package && npm test"
+    "all": "npm run clean && npm run build && npm run format && npm run lint && npm run package && npm run package-cli && npm test",
+    "prepare": "npm run all"
   },
   "repository": {
     "type": "git",
@@ -28,8 +36,10 @@
     "@actions/core": "^1.2.6",
     "@actions/github": "^4.0.0",
     "axios": "^0.21.1",
+    "chalk": "^4.1.0",
     "glob": "^7.1.6",
-    "handlebars": "^4.7.6"
+    "handlebars": "^4.7.6",
+    "meow": "^8.1.0"
   },
   "devDependencies": {
     "@types/axios": "^0.14.0",
@@ -46,6 +56,7 @@
     "jest-circus": "^26.6.3",
     "js-yaml": "^4.0.0",
     "prettier": "2.1.1",
+    "rimraf": "^3.0.2",
     "ts-jest": "^24.3.0",
     "typescript": "^4.1.3"
   }
