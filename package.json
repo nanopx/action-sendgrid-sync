@@ -1,6 +1,6 @@
 {
   "name": "sendgrid-sync",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "GitHub action to sync handlebars template with sendgrid",
   "main": "lib/syncSendgrid.js",
   "bin": "dist/cli/index.js",
@@ -22,7 +22,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/actions/typescript-action.git"
+    "url": "git+https://github.com/nanopx/action-sendgrid-sync.git"
   },
   "keywords": [
     "actions",
