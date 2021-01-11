@@ -85,25 +85,6 @@ test('dependency mappings', async () => {
   })
 })
 
-// test('diff from sha', async () => {
-//   const diff = await getDiffFromCommit(TEST_SHA)
-//   expect(diff).toEqual({
-//     addedFiles: [
-//       'src/findFiles.ts',
-//       'src/partialCompileHandlebars.ts',
-//       'yarn.lock'
-//     ],
-//     deletedFiles: ['src/wait.ts'],
-//     modifiedFiles: [
-//       'README.md',
-//       '__tests__/main.test.ts',
-//       'action.yml',
-//       'package.json',
-//       'src/main.ts'
-//     ]
-//   })
-// })
-
 describe('Calculate template changes', () => {
   let generateChangeset: any = null
 

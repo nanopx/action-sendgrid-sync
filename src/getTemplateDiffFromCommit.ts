@@ -4,7 +4,7 @@ import * as core from '@actions/core'
 
 const {owner, repo} = github.context.repo
 
-interface TemplateChanges {
+export interface TemplateChanges {
   added: string[]
   modified: string[]
   deleted: string[]
@@ -22,10 +22,15 @@ export const getTemplateDiffFromCommit = async (
     ref
   })
 
+  core.debug(`Committed template files:`)
+
   return (data?.files ?? []).reduce(
     (acc, file) => {
       const filePath = path.resolve(process.cwd(), file.filename as string)
       if (!filePath.endsWith('.hbs')) return acc
+
+      core.debug(`  - ${file.status}: ${filePath} `)
+
       return {
         ...acc,
         added: file.status === 'added' ? [...acc.added, filePath] : acc.added,

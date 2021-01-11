@@ -52,10 +52,12 @@ const getTemplateDiffFromCommit = (ref) => __awaiter(void 0, void 0, void 0, fun
         repo,
         ref
     });
+    core.debug(`Committed template files:`);
     return ((_a = data === null || data === void 0 ? void 0 : data.files) !== null && _a !== void 0 ? _a : []).reduce((acc, file) => {
         const filePath = path_1.default.resolve(process.cwd(), file.filename);
         if (!filePath.endsWith('.hbs'))
             return acc;
+        core.debug(`  - ${file.status}: ${filePath} `);
         return Object.assign(Object.assign({}, acc), { added: file.status === 'added' ? [...acc.added, filePath] : acc.added, modified: file.status === 'modified'
                 ? [...acc.modified, filePath]
                 : acc.modified, deleted: file.status === 'removed' ? [...acc.deleted, filePath] : acc.deleted, renamed: file.status === 'renamed'
@@ -120,7 +122,6 @@ const fs_1 = __webpack_require__(5747);
 const path_1 = __importDefault(__webpack_require__(5622));
 const github = __importStar(__webpack_require__(5438));
 const core = __importStar(__webpack_require__(2186));
-// import {exec} from '@actions/exec'
 const setupHandlebars_1 = __webpack_require__(1106);
 const getTemplateDiffFromCommit_1 = __webpack_require__(3852);
 const sendgrid_1 = __webpack_require__(8189);
@@ -139,11 +140,19 @@ sendgrid_1.setupClient(SENDGRID_API_KEY);
 const logger = (message, dryRun = false) => {
     core.info(`${dryRun ? '[DRY RUN] ' : ''}${message}`);
 };
-const logChanges = (changes, type, dryRun = false) => {
+const debugTemplateCommit = (changes, type) => {
     if (!changes[type].length)
         return;
-    logger(`${type[0].toUpperCase()}${type.substring(1, type.length)} templates detected:`, dryRun);
+    core.debug(`${type[0].toUpperCase()}${type.substring(1, type.length)} templates:`);
     for (const t of changes[type]) {
+        core.debug(`  - ${t}`);
+    }
+};
+const logChangeset = (changeset, type, dryRun = false) => {
+    if (!changeset[type].length)
+        return;
+    logger(`${type[0].toUpperCase()}${type.substring(1, type.length)} templates detected:`, dryRun);
+    for (const t of changeset[type]) {
         logger(`  - ${t}`, dryRun);
     }
 };
@@ -162,22 +171,28 @@ function run() {
                 core.info(`[DRY RUN] Dry run mode enabled`);
             }
             const { compileTemplate, generateChangeset } = yield setupHandlebars_1.setup(TEMPLATES_DIR, PARTIALS_DIR);
-            const changes = generateChangeset(FORCE_SYNC_ALL
+            const changes = FORCE_SYNC_ALL
                 ? {
                     // [Force Sync] Mark all templates as modified
-                    modified: (yield setupHandlebars_1.findTemplates(TEMPLATES_DIR, PARTIALS_DIR))
-                        .templates
+                    modified: (yield setupHandlebars_1.findTemplates(TEMPLATES_DIR, PARTIALS_DIR)).templates
                 }
-                : yield getTemplateDiffFromCommit_1.getTemplateDiffFromCommit(ref));
-            logChanges(changes, 'created', DRY_RUN);
-            logChanges(changes, 'updated', DRY_RUN);
-            logChanges(changes, 'renamed', DRY_RUN);
-            logChanges(changes, 'deleted', DRY_RUN);
-            const changedTemplates = [...changes.created, ...changes.updated];
+                : yield getTemplateDiffFromCommit_1.getTemplateDiffFromCommit(ref);
+            if (!FORCE_SYNC_ALL) {
+                debugTemplateCommit(changes, 'added');
+                debugTemplateCommit(changes, 'modified');
+                debugTemplateCommit(changes, 'renamed');
+                debugTemplateCommit(changes, 'deleted');
+            }
+            const changeset = generateChangeset(changes);
+            logChangeset(changeset, 'created', DRY_RUN);
+            logChangeset(changeset, 'updated', DRY_RUN);
+            logChangeset(changeset, 'renamed', DRY_RUN);
+            logChangeset(changeset, 'deleted', DRY_RUN);
+            const changedTemplates = [...changeset.created, ...changeset.updated];
             const templateMap = (yield Promise.all(changedTemplates.map((tplName) => __awaiter(this, void 0, void 0, function* () {
                 return (() => __awaiter(this, void 0, void 0, function* () { return [tplName, yield compileTemplate(tplName)]; }))();
             })))).reduce((acc, [name, content]) => (Object.assign(Object.assign({}, acc), { [name]: content })), {});
-            const templateIdMap = yield syncSendgrid_1.sync(changes, templateMap, {
+            const templateIdMap = yield syncSendgrid_1.sync(changeset, templateMap, {
                 templatePrefix: TEMPLATE_PREFIX,
                 subjectTemplate: SUBJECT_TEMPLATE,
                 preserveVersions: PRESERVE_VERSIONS,

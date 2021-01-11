@@ -2,9 +2,11 @@ import {writeFileSync} from 'fs'
 import path from 'path'
 import * as github from '@actions/github'
 import * as core from '@actions/core'
-// import {exec} from '@actions/exec'
 import {setup, findTemplates, Changeset} from './setupHandlebars'
-import {getTemplateDiffFromCommit} from './getTemplateDiffFromCommit'
+import {
+  getTemplateDiffFromCommit,
+  TemplateChanges
+} from './getTemplateDiffFromCommit'
 import {setupClient} from './sendgrid'
 import {sync} from './syncSendgrid'
 
@@ -26,12 +28,27 @@ const logger = (message: string, dryRun = false) => {
   core.info(`${dryRun ? '[DRY RUN] ' : ''}${message}`)
 }
 
-const logChanges = (
-  changes: Changeset,
+const debugTemplateCommit = (
+  changes: TemplateChanges,
+  type: keyof TemplateChanges
+) => {
+  if (!changes[type].length) return
+
+  core.debug(
+    `${type[0].toUpperCase()}${type.substring(1, type.length)} templates:`
+  )
+
+  for (const t of changes[type]) {
+    core.debug(`  - ${t}`)
+  }
+}
+
+const logChangeset = (
+  changeset: Changeset,
   type: keyof Changeset,
   dryRun = false
 ) => {
-  if (!changes[type].length) return
+  if (!changeset[type].length) return
 
   logger(
     `${type[0].toUpperCase()}${type.substring(
@@ -41,7 +58,7 @@ const logChanges = (
     dryRun
   )
 
-  for (const t of changes[type]) {
+  for (const t of changeset[type]) {
     logger(`  - ${t}`, dryRun)
   }
 }
@@ -68,22 +85,28 @@ async function run(): Promise<void> {
       PARTIALS_DIR
     )
 
-    const changes = generateChangeset(
-      FORCE_SYNC_ALL
-        ? {
-            // [Force Sync] Mark all templates as modified
-            modified: (await findTemplates(TEMPLATES_DIR, PARTIALS_DIR))
-              .templates
-          }
-        : await getTemplateDiffFromCommit(ref)
-    )
+    const changes = FORCE_SYNC_ALL
+      ? ({
+          // [Force Sync] Mark all templates as modified
+          modified: (await findTemplates(TEMPLATES_DIR, PARTIALS_DIR)).templates
+        } as TemplateChanges)
+      : await getTemplateDiffFromCommit(ref)
 
-    logChanges(changes, 'created', DRY_RUN)
-    logChanges(changes, 'updated', DRY_RUN)
-    logChanges(changes, 'renamed', DRY_RUN)
-    logChanges(changes, 'deleted', DRY_RUN)
+    if (!FORCE_SYNC_ALL) {
+      debugTemplateCommit(changes, 'added')
+      debugTemplateCommit(changes, 'modified')
+      debugTemplateCommit(changes, 'renamed')
+      debugTemplateCommit(changes, 'deleted')
+    }
 
-    const changedTemplates = [...changes.created, ...changes.updated]
+    const changeset = generateChangeset(changes)
+
+    logChangeset(changeset, 'created', DRY_RUN)
+    logChangeset(changeset, 'updated', DRY_RUN)
+    logChangeset(changeset, 'renamed', DRY_RUN)
+    logChangeset(changeset, 'deleted', DRY_RUN)
+
+    const changedTemplates = [...changeset.created, ...changeset.updated]
     const templateMap = (
       await Promise.all(
         changedTemplates.map(async tplName =>
@@ -96,7 +119,7 @@ async function run(): Promise<void> {
       {} as {[name: string]: string}
     )
 
-    const templateIdMap = await sync(changes, templateMap, {
+    const templateIdMap = await sync(changeset, templateMap, {
       templatePrefix: TEMPLATE_PREFIX,
       subjectTemplate: SUBJECT_TEMPLATE,
       preserveVersions: PRESERVE_VERSIONS,
