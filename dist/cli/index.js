@@ -461,31 +461,44 @@ const defaultLogger = (message, dryRun) => {
     // eslint-disable-next-line no-console
     console.log(`${dryRun ? '[DRY RUN] ' : ''}${message}`);
 };
-const sync = ({ created, updated, deleted, renamed }, templateMap, { templatePrefix = '', subjectTemplate = '{{ subject }}', preserveVersions = 2, dryRun = false, logger = defaultLogger } = {}) => __awaiter(void 0, void 0, void 0, function* () {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const noopLogger = (..._) => { };
+const logLists = (logger, title, arr, dryRun) => {
+    logger(title, dryRun);
+    for (const i of arr) {
+        logger(`  - ${i}`, dryRun);
+    }
+};
+const sync = ({ created, updated, deleted, renamed }, templateMap, { templatePrefix = '', subjectTemplate = '{{ subject }}', preserveVersions = 2, dryRun = false, logger = defaultLogger, debugLogger = noopLogger } = {}) => __awaiter(void 0, void 0, void 0, function* () {
     const getTemplateName = createTemplatePrefixer(templatePrefix);
     const removeTemplatePrefix = createTemplatePrefixRemover(templatePrefix);
     const { templates } = yield sendgrid_1.fetchTemplates();
     const existingTemplateNames = templates
         .filter(t => t.name.startsWith(templatePrefix))
         .map(t => removeTemplatePrefix(t.name));
+    logLists(debugLogger, 'Existing templates:', existingTemplateNames);
     // templates to create
     const createTemplates = [
         ...created.filter(t => !existingTemplateNames.includes(t)),
         ...updated.filter(t => !existingTemplateNames.includes(t))
     ];
+    logLists(debugLogger, 'createTemplates:', createTemplates);
     // templates to rename
     const renamedTemplates = [
         ...renamed.filter(({ from }) => existingTemplateNames.includes(from))
     ];
+    logLists(debugLogger, 'renamedTemplates:', renamedTemplates.map(({ from, to }) => `${from} -> ${to}`));
     // templates to create new version
     const updateVersionTemplates = [
         ...createTemplates,
         ...updated.filter(t => existingTemplateNames.includes(t))
     ];
+    logLists(debugLogger, 'updateVersionTemplates:', updateVersionTemplates);
     // templates to delete
     const deleteTemplates = [
         ...deleted.filter(t => existingTemplateNames.includes(t))
     ];
+    logLists(debugLogger, 'deleteTemplates:', deleteTemplates);
     const templateByName = templates
         .filter(t => t.name.startsWith(templatePrefix))
         .reduce((acc, t) => (Object.assign(Object.assign({}, acc), { [removeTemplatePrefix(t.name)]: t })), {});

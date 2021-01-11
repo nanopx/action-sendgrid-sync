@@ -37,7 +37,7 @@ const createTemplatePrefixer = (prefix: string) => (name: string) =>
 const createTemplatePrefixRemover = (prefix: string) => (name: string) =>
   name.replace(new RegExp(`^${prefix}`), '')
 
-type Logger = (message: string, dryRun: boolean) => void
+type Logger = (message: string, dryRun?: boolean) => void
 
 export interface SyncOptions {
   templatePrefix?: string
@@ -45,11 +45,28 @@ export interface SyncOptions {
   preserveVersions?: number
   dryRun?: boolean
   logger?: Logger
+  debugLogger?: Logger
 }
 
-const defaultLogger = (message: string, dryRun: boolean) => {
+const defaultLogger = (message: string, dryRun?: boolean) => {
   // eslint-disable-next-line no-console
   console.log(`${dryRun ? '[DRY RUN] ' : ''}${message}`)
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const noopLogger = (..._: any[]) => {}
+
+const logLists = (
+  logger: Logger,
+  title: string,
+  arr: string[],
+  dryRun?: boolean
+) => {
+  logger(title, dryRun)
+
+  for (const i of arr) {
+    logger(`  - ${i}`, dryRun)
+  }
 }
 
 export const sync = async (
@@ -60,16 +77,20 @@ export const sync = async (
     subjectTemplate = '{{ subject }}',
     preserveVersions = 2,
     dryRun = false,
-    logger = defaultLogger
+    logger = defaultLogger,
+    debugLogger = noopLogger
   }: SyncOptions = {}
 ): Promise<{[tplName: string]: string}> => {
   const getTemplateName = createTemplatePrefixer(templatePrefix)
   const removeTemplatePrefix = createTemplatePrefixRemover(templatePrefix)
 
   const {templates} = await fetchTemplates()
+
   const existingTemplateNames = templates
     .filter(t => t.name.startsWith(templatePrefix))
     .map(t => removeTemplatePrefix(t.name))
+
+  logLists(debugLogger, 'Existing templates:', existingTemplateNames)
 
   // templates to create
   const createTemplates = [
@@ -77,10 +98,18 @@ export const sync = async (
     ...updated.filter(t => !existingTemplateNames.includes(t))
   ]
 
+  logLists(debugLogger, 'createTemplates:', createTemplates)
+
   // templates to rename
   const renamedTemplates = [
     ...renamed.filter(({from}) => existingTemplateNames.includes(from))
   ]
+
+  logLists(
+    debugLogger,
+    'renamedTemplates:',
+    renamedTemplates.map(({from, to}) => `${from} -> ${to}`)
+  )
 
   // templates to create new version
   const updateVersionTemplates = [
@@ -88,10 +117,14 @@ export const sync = async (
     ...updated.filter(t => existingTemplateNames.includes(t))
   ]
 
+  logLists(debugLogger, 'updateVersionTemplates:', updateVersionTemplates)
+
   // templates to delete
   const deleteTemplates = [
     ...deleted.filter(t => existingTemplateNames.includes(t))
   ]
+
+  logLists(debugLogger, 'deleteTemplates:', deleteTemplates)
 
   const templateByName = templates
     .filter(t => t.name.startsWith(templatePrefix))

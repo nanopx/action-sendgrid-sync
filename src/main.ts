@@ -28,18 +28,20 @@ const logger = (message: string, dryRun = false) => {
   core.info(`${dryRun ? '[DRY RUN] ' : ''}${message}`)
 }
 
+const debug = (message: string, dryRun = false) => {
+  core.debug(`${dryRun ? '[DRY RUN] ' : ''}${message}`)
+}
+
 const debugTemplateCommit = (
   changes: TemplateChanges,
   type: keyof TemplateChanges
 ) => {
   if (!changes[type].length) return
 
-  core.debug(
-    `${type[0].toUpperCase()}${type.substring(1, type.length)} templates:`
-  )
+  debug(`${type[0].toUpperCase()}${type.substring(1, type.length)} templates:`)
 
   for (const t of changes[type]) {
-    core.debug(`  - ${t}`)
+    debug(`  - ${t}`)
   }
 }
 
@@ -124,7 +126,8 @@ async function run(): Promise<void> {
       subjectTemplate: SUBJECT_TEMPLATE,
       preserveVersions: PRESERVE_VERSIONS,
       dryRun: DRY_RUN,
-      logger
+      logger,
+      debugLogger: debug
     })
 
     if (OUTPUT_FILE) {
