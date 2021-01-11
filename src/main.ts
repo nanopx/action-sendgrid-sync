@@ -3,7 +3,7 @@ import path from 'path'
 import * as github from '@actions/github'
 import * as core from '@actions/core'
 // import {exec} from '@actions/exec'
-import {setup, findTemplates} from './setupHandlebars'
+import {setup, findTemplates, Changeset} from './setupHandlebars'
 import {getTemplateDiffFromCommit} from './getTemplateDiffFromCommit'
 import {setupClient} from './sendgrid'
 import {sync} from './syncSendgrid'
@@ -24,6 +24,26 @@ setupClient(SENDGRID_API_KEY)
 
 const logger = (message: string, dryRun = false) => {
   core.info(`${dryRun ? '[DRY RUN] ' : ''}${message}`)
+}
+
+const logChanges = (
+  changes: Changeset,
+  type: keyof Changeset,
+  dryRun = false
+) => {
+  if (!changes[type].length) return
+
+  logger(
+    `${type[0].toUpperCase()}${type.substring(
+      1,
+      type.length
+    )} templates detected:`,
+    dryRun
+  )
+
+  for (const t of changes[type]) {
+    logger(`  - ${t}`, dryRun)
+  }
 }
 
 async function run(): Promise<void> {
@@ -57,6 +77,11 @@ async function run(): Promise<void> {
           }
         : await getTemplateDiffFromCommit(ref)
     )
+
+    logChanges(changes, 'created', DRY_RUN)
+    logChanges(changes, 'updated', DRY_RUN)
+    logChanges(changes, 'renamed', DRY_RUN)
+    logChanges(changes, 'deleted', DRY_RUN)
 
     const changedTemplates = [...changes.created, ...changes.updated]
     const templateMap = (

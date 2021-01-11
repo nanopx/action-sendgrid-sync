@@ -139,6 +139,14 @@ sendgrid_1.setupClient(SENDGRID_API_KEY);
 const logger = (message, dryRun = false) => {
     core.info(`${dryRun ? '[DRY RUN] ' : ''}${message}`);
 };
+const logChanges = (changes, type, dryRun = false) => {
+    if (!changes[type].length)
+        return;
+    logger(`${type[0].toUpperCase()}${type.substring(1, type.length)} templates detected:`, dryRun);
+    for (const t of changes[type]) {
+        logger(`  - ${t}`, dryRun);
+    }
+};
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
@@ -161,6 +169,10 @@ function run() {
                         .templates
                 }
                 : yield getTemplateDiffFromCommit_1.getTemplateDiffFromCommit(ref));
+            logChanges(changes, 'created', DRY_RUN);
+            logChanges(changes, 'updated', DRY_RUN);
+            logChanges(changes, 'renamed', DRY_RUN);
+            logChanges(changes, 'deleted', DRY_RUN);
             const changedTemplates = [...changes.created, ...changes.updated];
             const templateMap = (yield Promise.all(changedTemplates.map((tplName) => __awaiter(this, void 0, void 0, function* () {
                 return (() => __awaiter(this, void 0, void 0, function* () { return [tplName, yield compileTemplate(tplName)]; }))();
@@ -512,7 +524,7 @@ const sync = ({ created, updated, deleted, renamed }, templateMap, { templatePre
     const templateByName = templates
         .filter(t => t.name.startsWith(templatePrefix))
         .reduce((acc, t) => (Object.assign(Object.assign({}, acc), { [removeTemplatePrefix(t.name)]: t })), {});
-    createTemplates.length && logger('Creating templates:', dryRun);
+    createTemplates.length && logger('[SendGrid] Creating templates:', dryRun);
     // create
     const createdResponses = yield Promise.all(createTemplates.map((t, i) => __awaiter(void 0, void 0, void 0, function* () {
         const name = getTemplateName(t);
@@ -526,7 +538,7 @@ const sync = ({ created, updated, deleted, renamed }, templateMap, { templatePre
         }
         return yield sendgrid_1.createTemplate(name);
     })));
-    renamedTemplates.length && logger('Renaming templates:', dryRun);
+    renamedTemplates.length && logger('[SendGrid] Renaming templates:', dryRun);
     // rename
     const renamedResponses = yield Promise.all(renamedTemplates.map(({ from, to }, i) => __awaiter(void 0, void 0, void 0, function* () {
         const fromName = getTemplateName(from);
@@ -553,7 +565,7 @@ const sync = ({ created, updated, deleted, renamed }, templateMap, { templatePre
         delete templateByName[from];
     }
     updateVersionTemplates.length &&
-        logger('Creating new template versions:', dryRun);
+        logger('[SendGrid] Creating new template versions:', dryRun);
     // create new versions
     yield Promise.all(updateVersionTemplates.map((t) => __awaiter(void 0, void 0, void 0, function* () {
         const name = getTemplateName(t);
@@ -577,7 +589,7 @@ const sync = ({ created, updated, deleted, renamed }, templateMap, { templatePre
         const targetTemplate = templateByName[t];
         return getOutdatedVersions(targetTemplate, preserveVersions).length !== 0;
     }));
-    hasOutdated && logger('Deleting old template versions:', dryRun);
+    hasOutdated && logger('[SendGrid] Deleting old template versions:', dryRun);
     // delete old versions
     yield Promise.all(updateVersionTemplates.map((t) => __awaiter(void 0, void 0, void 0, function* () {
         const name = getTemplateName(t);

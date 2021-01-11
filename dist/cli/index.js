@@ -489,7 +489,7 @@ const sync = ({ created, updated, deleted, renamed }, templateMap, { templatePre
     const templateByName = templates
         .filter(t => t.name.startsWith(templatePrefix))
         .reduce((acc, t) => (Object.assign(Object.assign({}, acc), { [removeTemplatePrefix(t.name)]: t })), {});
-    createTemplates.length && logger('Creating templates:', dryRun);
+    createTemplates.length && logger('[SendGrid] Creating templates:', dryRun);
     // create
     const createdResponses = yield Promise.all(createTemplates.map((t, i) => __awaiter(void 0, void 0, void 0, function* () {
         const name = getTemplateName(t);
@@ -503,7 +503,7 @@ const sync = ({ created, updated, deleted, renamed }, templateMap, { templatePre
         }
         return yield sendgrid_1.createTemplate(name);
     })));
-    renamedTemplates.length && logger('Renaming templates:', dryRun);
+    renamedTemplates.length && logger('[SendGrid] Renaming templates:', dryRun);
     // rename
     const renamedResponses = yield Promise.all(renamedTemplates.map(({ from, to }, i) => __awaiter(void 0, void 0, void 0, function* () {
         const fromName = getTemplateName(from);
@@ -530,7 +530,7 @@ const sync = ({ created, updated, deleted, renamed }, templateMap, { templatePre
         delete templateByName[from];
     }
     updateVersionTemplates.length &&
-        logger('Creating new template versions:', dryRun);
+        logger('[SendGrid] Creating new template versions:', dryRun);
     // create new versions
     yield Promise.all(updateVersionTemplates.map((t) => __awaiter(void 0, void 0, void 0, function* () {
         const name = getTemplateName(t);
@@ -554,7 +554,7 @@ const sync = ({ created, updated, deleted, renamed }, templateMap, { templatePre
         const targetTemplate = templateByName[t];
         return getOutdatedVersions(targetTemplate, preserveVersions).length !== 0;
     }));
-    hasOutdated && logger('Deleting old template versions:', dryRun);
+    hasOutdated && logger('[SendGrid] Deleting old template versions:', dryRun);
     // delete old versions
     yield Promise.all(updateVersionTemplates.map((t) => __awaiter(void 0, void 0, void 0, function* () {
         const name = getTemplateName(t);

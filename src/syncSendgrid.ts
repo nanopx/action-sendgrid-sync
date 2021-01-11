@@ -103,7 +103,7 @@ export const sync = async (
       {} as {[name: string]: Template}
     )
 
-  createTemplates.length && logger('Creating templates:', dryRun)
+  createTemplates.length && logger('[SendGrid] Creating templates:', dryRun)
 
   // create
   const createdResponses = await Promise.all(
@@ -123,7 +123,7 @@ export const sync = async (
     })
   )
 
-  renamedTemplates.length && logger('Renaming templates:', dryRun)
+  renamedTemplates.length && logger('[SendGrid] Renaming templates:', dryRun)
 
   // rename
   const renamedResponses = await Promise.all(
@@ -160,7 +160,7 @@ export const sync = async (
   }
 
   updateVersionTemplates.length &&
-    logger('Creating new template versions:', dryRun)
+    logger('[SendGrid] Creating new template versions:', dryRun)
 
   // create new versions
   await Promise.all(
@@ -197,7 +197,7 @@ export const sync = async (
     })
   )
 
-  hasOutdated && logger('Deleting old template versions:', dryRun)
+  hasOutdated && logger('[SendGrid] Deleting old template versions:', dryRun)
 
   // delete old versions
   await Promise.all(
