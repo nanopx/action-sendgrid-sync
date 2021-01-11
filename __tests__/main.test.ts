@@ -243,7 +243,7 @@ describe('Calculate template changes', () => {
     ).toEqual({
       created: [],
       updated: [],
-      deleted: ['nested/template', 'template'],
+      deleted: ['template', 'nested/template'],
       renamed: []
     })
   })

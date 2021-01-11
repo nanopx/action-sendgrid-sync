@@ -417,8 +417,8 @@ const createGenerateChangeset = (templatesDir, partialsDir = undefined, template
     const modifiedTemplates = templates
         .filter(t => modified.includes(t))
         .map(t => exports.getTemplateName(templatesDir, t));
-    const deletedTemplates = templates
-        .filter(t => deleted.includes(t))
+    const deletedTemplates = deleted
+        .filter(t => !partials.includes(t))
         .map(t => exports.getTemplateName(templatesDir, t));
     const renamedTemplates = renamed.map(({ from, to }) => ({
         from: exports.getTemplateName(templatesDir, from),

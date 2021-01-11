@@ -1,6 +1,6 @@
 {
   "name": "sendgrid-sync",
-  "version": "0.4.4",
+  "version": "0.5.0",
   "description": "GitHub action to sync handlebars template with sendgrid",
   "main": "lib/syncSendgrid.js",
   "bin": "dist/cli/index.js",
