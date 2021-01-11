@@ -29,6 +29,9 @@ inputs:
     required: false
     description: 'Number of versions to preserve per template'
     default: '2'
+  outputFile:
+    required: false
+    description: 'Output file path for the mapping json'
   dryRun:
     required: false
     description: 'Dry run'

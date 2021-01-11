@@ -1,3 +1,5 @@
+import {writeFileSync} from 'fs'
+import path from 'path'
 import * as github from '@actions/github'
 import * as core from '@actions/core'
 // import {exec} from '@actions/exec'
@@ -15,6 +17,7 @@ const SUBJECT_TEMPLATE: string =
 const PRESERVE_VERSIONS = Number(core.getInput('preserveVersions') || '2')
 const DRY_RUN = core.getInput('dryRun') === 'true'
 const FORCE_SYNC_ALL = core.getInput('forceSyncAll') === 'true'
+const OUTPUT_FILE = core.getInput('outputFile') || ''
 const ref = github.context.ref
 
 setupClient(SENDGRID_API_KEY)
@@ -75,6 +78,13 @@ async function run(): Promise<void> {
       dryRun: DRY_RUN,
       logger
     })
+
+    if (OUTPUT_FILE) {
+      writeFileSync(
+        path.resolve(process.cwd(), OUTPUT_FILE),
+        JSON.stringify(templateIdMap, null, 2)
+      )
+    }
 
     core.setOutput('sendgridTemplateIdMapping', JSON.stringify(templateIdMap))
 

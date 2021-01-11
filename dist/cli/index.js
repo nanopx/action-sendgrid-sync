@@ -46,9 +46,10 @@ const cli = meow_1.default(`
     --api-key, -a       SendGrid API key (Recommended to use 'SENDGRID_API_KEY' environment variable)
     --template-prefix   Template name prefixes
     --subject-template  Subject template
+    --target, -t        Target template base names (names without the prefix specified with '--template-prefix')
     --preserve-versions Number of versions to preserve per template
     --dry-run           Dry run
-    --output-file, -o        Output template mapping json to file
+    --output-file, -o   Output template mapping json to file
 
   Examples
     $ SENDGRID_API_KEY=<SENDGRID_API_KEY> sendgrid-sync ./path/to/templates -p ./path/to/templates/partials 
@@ -67,6 +68,11 @@ const cli = meow_1.default(`
         templatePrefix: {
             type: 'string',
             default: ''
+        },
+        target: {
+            type: 'string',
+            alias: 't',
+            isMultiple: true
         },
         subjectTemplate: {
             type: 'string',
@@ -99,12 +105,13 @@ if (!templatesDir) {
     // Exit with help
     cli.showHelp();
 }
-const { partialsDir, templatePrefix, subjectTemplate, preserveVersions, dryRun, apiKey, output } = flags;
+const { partialsDir, templatePrefix, target = [], subjectTemplate, preserveVersions, dryRun, apiKey, output } = flags;
 // eslint-disable-next-line no-console
 console.log(`
 ${chalk_1.default.yellow('Templates Directory :')} ${templatesDir}
 ${chalk_1.default.yellow('Partials Directory  :')} ${partialsDir}
 ${chalk_1.default.yellow('Template Prefix     :')} ${templatePrefix}
+${chalk_1.default.yellow('Target Templates    :')} ${target.length ? target.join(', ') : 'ALL'}
 ${chalk_1.default.yellow('Subject Template    :')} ${subjectTemplate}
 ${chalk_1.default.yellow('Preserve Versions   :')} ${preserveVersions}
 ${chalk_1.default.yellow('Dry Run             :')} ${dryRun ? 'true' : 'false'}
@@ -117,9 +124,21 @@ if (!sgApiKey) {
 const execSync = () => __awaiter(void 0, void 0, void 0, function* () {
     sendgrid_1.setupClient(sgApiKey);
     const { compileTemplate, generateChangeset } = yield setupHandlebars_1.setup(templatesDir, partialsDir);
+    const { templates } = yield setupHandlebars_1.findTemplates(templatesDir, partialsDir);
+    const targetPaths = target.map(t => path_1.default.resolve(templatesDir, `${t}.hbs`));
+    if (targetPaths.length) {
+        // Check if all targets exist
+        const exists = targetPaths.find(t => !templates.includes(t));
+        if (exists)
+            throw new Error(`Cannot find template: ${exists}`);
+    }
+    const targetTemplates = !targetPaths.length
+        ? // Mark all templates as modified (Force-sync all files in CLI)
+            templates
+        : // Use the specified target templates
+            targetPaths;
     const changes = generateChangeset({
-        // Mark all templates as modified (Force-sync all files in CLI)
-        modified: (yield setupHandlebars_1.findTemplates(templatesDir, partialsDir)).templates
+        modified: targetTemplates
     });
     const changedTemplates = [...changes.created, ...changes.updated];
     const templateMap = (yield Promise.all(changedTemplates.map((tplName) => __awaiter(void 0, void 0, void 0, function* () {

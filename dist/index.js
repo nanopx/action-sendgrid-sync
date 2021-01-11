@@ -112,7 +112,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+const fs_1 = __webpack_require__(5747);
+const path_1 = __importDefault(__webpack_require__(5622));
 const github = __importStar(__webpack_require__(5438));
 const core = __importStar(__webpack_require__(2186));
 // import {exec} from '@actions/exec'
@@ -128,6 +133,7 @@ const SUBJECT_TEMPLATE = core.getInput('subjectTemplate') || '{{subject}}';
 const PRESERVE_VERSIONS = Number(core.getInput('preserveVersions') || '2');
 const DRY_RUN = core.getInput('dryRun') === 'true';
 const FORCE_SYNC_ALL = core.getInput('forceSyncAll') === 'true';
+const OUTPUT_FILE = core.getInput('outputFile') || '';
 const ref = github.context.ref;
 sendgrid_1.setupClient(SENDGRID_API_KEY);
 const logger = (message, dryRun = false) => {
@@ -166,6 +172,9 @@ function run() {
                 dryRun: DRY_RUN,
                 logger
             });
+            if (OUTPUT_FILE) {
+                fs_1.writeFileSync(path_1.default.resolve(process.cwd(), OUTPUT_FILE), JSON.stringify(templateIdMap, null, 2));
+            }
             core.setOutput('sendgridTemplateIdMapping', JSON.stringify(templateIdMap));
             core.info('\nSendGrid Sync completed.');
         }

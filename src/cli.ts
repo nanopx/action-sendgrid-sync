@@ -29,9 +29,10 @@ const cli = meow(
     --api-key, -a       SendGrid API key (Recommended to use 'SENDGRID_API_KEY' environment variable)
     --template-prefix   Template name prefixes
     --subject-template  Subject template
+    --target, -t        Target template base names (names without the prefix specified with '--template-prefix')
     --preserve-versions Number of versions to preserve per template
     --dry-run           Dry run
-    --output-file, -o        Output template mapping json to file
+    --output-file, -o   Output template mapping json to file
 
   Examples
     $ SENDGRID_API_KEY=<SENDGRID_API_KEY> sendgrid-sync ./path/to/templates -p ./path/to/templates/partials 
@@ -51,6 +52,11 @@ const cli = meow(
       templatePrefix: {
         type: 'string',
         default: ''
+      },
+      target: {
+        type: 'string',
+        alias: 't',
+        isMultiple: true
       },
       subjectTemplate: {
         type: 'string',
@@ -90,6 +96,7 @@ if (!templatesDir) {
 const {
   partialsDir,
   templatePrefix,
+  target = [],
   subjectTemplate,
   preserveVersions,
   dryRun,
@@ -103,6 +110,9 @@ console.log(
 ${chalk.yellow('Templates Directory :')} ${templatesDir}
 ${chalk.yellow('Partials Directory  :')} ${partialsDir}
 ${chalk.yellow('Template Prefix     :')} ${templatePrefix}
+${chalk.yellow('Target Templates    :')} ${
+    target.length ? target.join(', ') : 'ALL'
+  }
 ${chalk.yellow('Subject Template    :')} ${subjectTemplate}
 ${chalk.yellow('Preserve Versions   :')} ${preserveVersions}
 ${chalk.yellow('Dry Run             :')} ${dryRun ? 'true' : 'false'}
@@ -127,9 +137,23 @@ const execSync = async () => {
     partialsDir
   )
 
+  const {templates} = await findTemplates(templatesDir, partialsDir)
+
+  const targetPaths = target.map(t => path.resolve(templatesDir, `${t}.hbs`))
+  if (targetPaths.length) {
+    // Check if all targets exist
+    const exists = targetPaths.find(t => !templates.includes(t))
+    if (exists) throw new Error(`Cannot find template: ${exists}`)
+  }
+
+  const targetTemplates = !targetPaths.length
+    ? // Mark all templates as modified (Force-sync all files in CLI)
+      templates
+    : // Use the specified target templates
+      targetPaths
+
   const changes = generateChangeset({
-    // Mark all templates as modified (Force-sync all files in CLI)
-    modified: (await findTemplates(templatesDir, partialsDir)).templates
+    modified: targetTemplates
   })
 
   const changedTemplates = [...changes.created, ...changes.updated]
