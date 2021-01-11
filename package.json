@@ -1,6 +1,6 @@
 {
   "name": "sendgrid-sync",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "GitHub action to sync handlebars template with sendgrid",
   "main": "lib/syncSendgrid.js",
   "bin": "dist/cli/index.js",
@@ -14,7 +14,7 @@
     "format-check": "prettier --check **/*.ts",
     "clean": "rimraf ./lib && rimraf ./dist",
     "lint": "eslint src/**/*.ts",
-    "package": "ncc build --source-map --license licenses.txt",
+    "package": "ncc build lib/main.js -o dist/ --source-map --license licenses.txt",
     "package-cli": "ncc build lib/cli.js -o dist/cli --source-map --license licenses.txt",
     "test": "jest",
     "all": "npm run clean && npm run build && npm run format && npm run lint && npm run package && npm run package-cli && npm test",
