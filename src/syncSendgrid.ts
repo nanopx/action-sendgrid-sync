@@ -257,12 +257,15 @@ export const sync = async (
     })
   )
 
+  deleteTemplates.length && logger('[SendGrid] Deleting templates:', dryRun)
+
   // delete
   await Promise.all(
     deleteTemplates.map(async t => {
+      const name = getTemplateName(t)
       const targetTemplate = templateByName[t]
 
-      logger(`Deleting template: ${t}`, dryRun)
+      logger(`  - Deleting template: ${name}`, dryRun)
 
       if (dryRun) {
         return Promise.resolve()

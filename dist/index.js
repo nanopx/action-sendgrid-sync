@@ -636,10 +636,12 @@ const sync = ({ created, updated, deleted, renamed }, templateMap, { templatePre
             return sendgrid_1.deleteTemplateVersion(targetTemplate.id, (_a = targetTemplate.versions.find(version => version.name === v)) === null || _a === void 0 ? void 0 : _a.id);
         })));
     })));
+    deleteTemplates.length && logger('[SendGrid] Deleting templates:', dryRun);
     // delete
     yield Promise.all(deleteTemplates.map((t) => __awaiter(void 0, void 0, void 0, function* () {
+        const name = getTemplateName(t);
         const targetTemplate = templateByName[t];
-        logger(`Deleting template: ${t}`, dryRun);
+        logger(`  - Deleting template: ${name}`, dryRun);
         if (dryRun) {
             return Promise.resolve();
         }
