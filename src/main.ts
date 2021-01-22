@@ -67,8 +67,10 @@ const logChangeset = (
 
 async function run(): Promise<void> {
   try {
-    if (github.context.eventName !== 'push') {
-      core.info('SendGrid Sync currently only works on push events.')
+    if (github.context.eventName !== 'push' && !FORCE_SYNC_ALL) {
+      core.info(
+        'SendGrid Sync currently only works on push events. Use forceSyncAll option to sync all templates.'
+      )
       return
     }
 
