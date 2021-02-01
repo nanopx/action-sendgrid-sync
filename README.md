@@ -65,8 +65,18 @@ $ npx sendgrid-sync -h
     Sync all templates with SendGrid
 ```
 
-### Create a new version for specified templates
+
+
+### Sync all templates with SendGrid
+
+```bash
+$ npx sendgrid-sync path/to/templates/ -p path/to/partials/
+```
+
+### Create a new version with prefix for specified templates
 
 ```bash
 $ npx sendgrid-sync path/to/templates/ -p path/to/partials/ --template-prefix dev/ -t target_template_name_1 -t target_template_name_2
 ```
+
+
