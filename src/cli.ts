@@ -7,6 +7,7 @@ import chalk from 'chalk'
 import {setupClient} from './sendgrid'
 import {findTemplates, setup} from './setupHandlebars'
 import {sync} from './syncSendgrid'
+import {readFile} from 'fs/promises'
 
 const log = (message: string, dryRun = false) => {
   // eslint-disable-next-line no-console
@@ -29,6 +30,7 @@ const cli = meow(
     --api-key, -a       SendGrid API key (Recommended to use 'SENDGRID_API_KEY' environment variable)
     --template-prefix   Template name prefixes
     --subject-template  Subject template
+    --subject-map       Subject map json file
     --target, -t        Target template base names (names without the prefix specified with '--template-prefix')
     --preserve-versions Number of versions to preserve per template
     --dry-run           Dry run
@@ -61,6 +63,10 @@ const cli = meow(
       subjectTemplate: {
         type: 'string',
         default: '{{subject}}'
+      },
+      subjectMap: {
+        isRequired: false,
+        type: 'string'
       },
       preserveVersions: {
         type: 'number',
@@ -98,6 +104,7 @@ const {
   templatePrefix,
   target = [],
   subjectTemplate,
+  subjectMap,
   preserveVersions,
   dryRun,
   apiKey,
@@ -114,6 +121,7 @@ ${chalk.yellow('Target Templates    :')} ${
     target.length ? target.join(', ') : 'ALL'
   }
 ${chalk.yellow('Subject Template    :')} ${subjectTemplate}
+${chalk.yellow('Subject Template Map:')} ${subjectMap}
 ${chalk.yellow('Preserve Versions   :')} ${preserveVersions}
 ${chalk.yellow('Dry Run             :')} ${dryRun ? 'true' : 'false'}
 ${chalk.yellow('Output File         :')} ${
@@ -169,7 +177,16 @@ const execSync = async () => {
     {} as {[name: string]: string}
   )
 
-  const templateIdMap = await sync(changes, templateMap, {
+  const subjectMapContent = subjectMap ? await readFile(subjectMap) : '{}'
+  let subjectMapJson
+  try {
+    subjectMapJson = JSON.parse(subjectMapContent.toString())
+  } catch (e) {
+    logError(`Failed to parse subject map json: ${e.message}`)
+    subjectMapJson = {}
+  }
+
+  const templateIdMap = await sync(changes, templateMap, subjectMapJson, {
     templatePrefix,
     subjectTemplate,
     preserveVersions,

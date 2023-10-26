@@ -72,6 +72,7 @@ const logLists = (
 export const sync = async (
   {created, updated, deleted, renamed}: Changeset,
   templateMap: {[tplName: string]: string},
+  subjectMap: {[tplName: string]: string},
   {
     templatePrefix = '',
     subjectTemplate = '{{ subject }}',
@@ -201,6 +202,7 @@ export const sync = async (
       const name = getTemplateName(t)
       const targetTemplate = templateByName[t]
       const nextVer = getNextVersion(targetTemplate)
+      const subject = subjectMap[t] ?? subjectTemplate
 
       logger(
         `  - Creating new version for template: ${name} (${nextVer})`,
@@ -214,7 +216,7 @@ export const sync = async (
       return targetTemplate
         ? createTemplateVersion(targetTemplate.id, {
             name: nextVer,
-            subject: subjectTemplate,
+            subject,
             active: 1,
             html_content: templateMap[t],
             plain_content: ''

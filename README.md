@@ -33,6 +33,7 @@ GitHub action to sync handlebars template with sendgrid
 | `partialsDir` | _optional_ | Partials directory |
 | `templatePrefix` | _optional_ | Template name prefix |
 | `subjectTemplate` | _optional_ | Subject template. Defaults to `{{subject}}` |
+| `subjectMap` | _optional_ | Path to json file of subject templates to use per template |
 | `preserveVersions` | _optional_ | Number of versions to preserve per template. Defaults to `'2'` |
 | `outputFile` | _optional_ | Output file path for the mapping json |
 | `dryRun` | _optional_ | Enable dry run mode |
@@ -55,6 +56,7 @@ $ npx sendgrid-sync -h
     --api-key, -a       SendGrid API key (Recommended to use 'SENDGRID_API_KEY' environment variable)
     --template-prefix   Template name prefixes
     --subject-template  Subject template
+    --subject-map       Subject map json file
     --target, -t        Target template base names (names without the prefix specified with '--template-prefix')
     --preserve-versions Number of versions to preserve per template
     --dry-run           Dry run

@@ -9,11 +9,13 @@ import {
 } from './getTemplateDiffFromCommit'
 import {setupClient} from './sendgrid'
 import {sync} from './syncSendgrid'
+import {readFile} from 'fs/promises'
 
 const SENDGRID_API_KEY: string = core.getInput('sendgridApiKey')
 const TEMPLATES_DIR: string = core.getInput('templatesDir')
 const PARTIALS_DIR: string = core.getInput('partialsDir')
 const TEMPLATE_PREFIX: string = core.getInput('templatePrefix') || ''
+const SUBJECT_MAP: string = core.getInput('subjectMap')
 const SUBJECT_TEMPLATE: string =
   core.getInput('subjectTemplate') || '{{subject}}'
 const PRESERVE_VERSIONS = Number(core.getInput('preserveVersions') || '2')
@@ -123,7 +125,16 @@ async function run(): Promise<void> {
       {} as {[name: string]: string}
     )
 
-    const templateIdMap = await sync(changeset, templateMap, {
+    const subjectMapContent = SUBJECT_MAP ? await readFile(SUBJECT_MAP) : '{}'
+    let subjectMapJson
+    try {
+      subjectMapJson = JSON.parse(subjectMapContent.toString())
+    } catch (e) {
+      core.error(`Failed to parse subject map json: ${e.message}`)
+      subjectMapJson = {}
+    }
+
+    const templateIdMap = await sync(changeset, templateMap, subjectMapJson, {
       templatePrefix: TEMPLATE_PREFIX,
       subjectTemplate: SUBJECT_TEMPLATE,
       preserveVersions: PRESERVE_VERSIONS,
