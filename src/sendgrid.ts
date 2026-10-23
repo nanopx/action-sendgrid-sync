@@ -1,4 +1,4 @@
-import axios, {AxiosInstance} from 'axios'
+import axios, {AxiosError, AxiosInstance} from 'axios'
 
 const TEMPLATE_GENERATION = 'dynamic'
 
@@ -43,6 +43,20 @@ export const setupClient = (apiKey: string): AxiosInstance => {
     headers: {
       Authorization: `Bearer ${apiKey}`
     }
+  })
+
+  // Include the request and SendGrid's error response in the error message
+  client.interceptors.response.use(undefined, async (error: AxiosError) => {
+    if (error.response) {
+      const {method = '', url = ''} = error.config
+      error.message = `${
+        error.message
+      } (${method.toUpperCase()} ${url}): ${JSON.stringify(
+        error.response.data
+      )}`
+    }
+
+    throw error
   })
 
   return client

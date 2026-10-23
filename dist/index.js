@@ -252,6 +252,14 @@ const setupClient = (apiKey) => {
             Authorization: `Bearer ${apiKey}`
         }
     });
+    // Include the request and SendGrid's error response in the error message
+    client.interceptors.response.use(undefined, (error) => __awaiter(void 0, void 0, void 0, function* () {
+        if (error.response) {
+            const { method = '', url = '' } = error.config;
+            error.message = `${error.message} (${method.toUpperCase()} ${url}): ${JSON.stringify(error.response.data)}`;
+        }
+        throw error;
+    }));
     return client;
 };
 exports.setupClient = setupClient;
